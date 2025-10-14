@@ -1,4 +1,4 @@
-# cselectron
+# electron-jiemi 
 
 ## Project setup
 ```
