@@ -74,8 +74,8 @@
       <div class="dleft">登陆名</div>
       <div> <el-input v-model="username" placeholder="请输入用户登陆名"></el-input> </div>
       <div class="dleft">密码</div>
-      <div> <el-input v-model="userpwd" type="password" placeholder="请输入密码"></el-input> </div>
-      <div><el-button class="dbtn" type="primary" @click="login">登录</el-button></div>
+      <div> <el-input v-model="userpwd" @keyup.enter="login" type="password" placeholder="请输入密码"></el-input> </div>
+      <div><el-button class="dbtn" type="primary" @click="login" v-debounce:2000="'登录'">登录</el-button></div>
     </div>
   </div>
 </template>
@@ -101,7 +101,8 @@ export default {
       userInfo: undefined,
       username: '',
       userpwd: '',
-      jmlist: null
+      jmlist: null,
+      baseUrl: "https://cosunerp.signcc.com/cosunErp/",
     }
   },
   mounted() {
@@ -114,7 +115,7 @@ export default {
         return;
       }
       var time = new Date().getTime();
-      var tjlist = this.wjlist.map(item=>{
+      var tjlist = this.wjlist.map(item => {
         return {
           name: item.name,
           path: item.path,
@@ -122,7 +123,7 @@ export default {
         }
       })
       localStorage.setItem('jmlist', JSON.stringify(tjlist))
-      console.log(this.userInfo, '地方',this.wjlist)
+      console.log(this.userInfo, '地方', this.wjlist)
     },
     clearuserInfo() {
       this.userInfo = undefined;
@@ -137,13 +138,42 @@ export default {
         this.$message.error('请输入密码');
         return;
       }
-      this.userInfo = {
-        username: this.username,
-        userpwd: this.userpwd,
-      };
-      localStorage.setItem('userInfo', JSON.stringify(this.userInfo));
-      this.$message.success('登录成功');
+      var obj = {
+        userName: this.username,
+        pwd: this.userpwd,
+      }
+      const queryString = new URLSearchParams(obj).toString();
+      const loading = this.$loading({
+        lock: true,
+        text: 'Loading',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)',
+      })
+      fetch(`${this.baseUrl}login/loginByUserName`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: queryString,
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          loading.close()
+          if (data.result === 0) {
+            this.userInfo = {
+              username: this.username,
+              userpwd: this.userpwd,
+            };
+            localStorage.setItem('userInfo', JSON.stringify(this.userInfo));
+            this.$message.success('登录成功');
+          } else {
 
+            this.$message.error(data.msg);
+          }
+        }).catch(() => {
+          loading.close()
+          // this.$message.error('登录失败');
+        })
     },
     wjdelate2(index) {
       this.wjlist.splice(index, 1);
@@ -211,7 +241,7 @@ export default {
 
     // 下载文件
     async downloadFile() {
-      console.log(JSON.parse(localStorage.getItem('jmlist')), '方法')  
+      console.log(JSON.parse(localStorage.getItem('jmlist')), '方法')
       localStorage.removeItem('jmlist')
       this.isDownloading = true
       if (!this.downloadUrl || !this.saveFileName) {
@@ -376,7 +406,6 @@ export default {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  color: #2c3e50;
   margin-top: 60px;
 }
 
