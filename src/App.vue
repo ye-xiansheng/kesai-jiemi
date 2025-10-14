@@ -1,81 +1,95 @@
 <template>
   <div class="container">
     <div v-if="userInfo">
-      <el-button class="lgot" @click="clearuserInfo">退出登陆</el-button>
-      <el-upload class="uploader" :show-file-list="false" action="#" drag multiple :http-request="upload2">
-        <div class="el-upload__text">
-          将文件拖到此处，<em>或点击上传</em>
+      <div class="d-fb">
+        <div>
+          <span class="ud">{{ userInfo.dep }}</span>
+          <span class="un">{{ userInfo.name }}</span>
         </div>
-      </el-upload>
-      <div class="wj">
-        <div v-for="(item, index) in wjlist" class="dcen" :key="index">
-          <div class="dcen"><span style="color: #999;min-width: 70px;">文件名：</span> <span style="font-weight: bold;">{{
-            item.name }}</span>
+        <el-button class="lgot" type="text" @click="clearuserInfo">退出登陆</el-button>
+      </div>
+      <el-radio-group v-model="radio1" @change="radioChange">
+        <el-radio-button label="解密申请"></el-radio-button>
+        <el-radio-button label="解密申请待审批列表"></el-radio-button>
+      </el-radio-group>
+      <div class="mt20" v-if="radio1 == '解密申请'">
+        <el-upload class="uploader" :show-file-list="false" action="#" drag multiple :http-request="upload2">
+          <div class="el-upload__text">
+            将文件拖到此处，<em>或点击上传</em>
           </div>
-          <div class="dcen" style="margin: 0 10px;"><span style="color: #999;min-width: 100px;">文件夹路径：</span> <span
-              style="font-weight: bold;">{{ item.path }}</span></div>
-          <el-button style="margin-right: 10px;" type="text" @click="wjdelate2(index)">删除</el-button>
-        </div>
-      </div>
-      <div class="tjbtn"><el-button style="width: 90%;" @click="submitjm" type="primary">提交解密申请</el-button></div>
-      <!-- <div class="file-delete-section">
-      <h2>文件删除工具</h2>
-
-      <div class="input-group">
-        <input type="text" v-model="filePath" placeholder="请输入要删除的文件路径..." class="file-path-input">
-      </div>
-
-      <button @click="deleteFile" class="delete-btn" :disabled="!filePath">
-        删除文件
-      </button>
-
-      <div v-if="message" :class="['message', messageType]">
-        {{ message }}
-      </div>
-    </div> -->
-
-      <!-- 文件下载工具 -->
-      <div class="file-download-section">
-        <h2>文件下载工具</h2>
-
-        <div class="input-group">
-          <input type="text" v-model="downloadUrl" placeholder="请输入要下载的在线链接..." class="file-path-input">
-        </div>
-
-        <div class="input-group">
-          <input type="text" v-model="saveFileName" placeholder="请输入保存的文件名..." class="file-path-input">
-        </div>
-
-        <div class="download-path">
-          <label>下载目录：</label>
-          <span>{{ downloadDirectory }}</span>
-        </div>
-
-        <button @click="downloadFile" class="download-btn">
-          {{ isDownloading ? '下载中...' : '开始下载' }}
-        </button>
-
-        <!-- 下载进度条 -->
-        <div v-if="isDownloading" class="progress-container">
-          <div class="progress-bar">
-            <div class="progress" :style="{ width: downloadProgress + '%' }"></div>
+        </el-upload>
+        <div class="wj">
+          <div v-for="(item, index) in wjlist" class="dcen" :key="index">
+            <div class="dcen"><span style="color: #999;min-width: 70px;">文件名：</span> <span style="font-weight: bold;">{{
+              item.name }}</span>
+            </div>
+            <div class="dcen" style="margin: 0 10px;"><span style="color: #999;min-width: 100px;">文件夹路径：</span> <span
+                style="font-weight: bold;">{{ item.path }}</span></div>
+            <el-button style="margin-right: 10px;" type="text" @click="wjdelate2(index)">删除</el-button>
           </div>
-          <span class="progress-text">{{ downloadProgress }}%</span>
         </div>
+        <div class="mt20"><span style="color: red;">*</span> 解密原因</div>
+        <div class="mt20">
+          <el-input :autosize="{ minRows: 4, maxRows: 8 }" :maxlength="200" v-model="jmyy" type="textarea"
+            placeholder="请输入解密原因"></el-input>
+        </div>
+        <div class="tjbtn"><el-button style="width: 95%;" @click="submitjm" v-debounce:2000="'提交解密申请'"
+            type="primary">提交解密申请</el-button></div>
 
-        <div v-if="downloadMessage" :class="['message', downloadMessageType]">
-          {{ downloadMessage }}
-        </div>
+        <el-button class="mt20" @click="tihuan" type="primary">测试审批通过替换文件</el-button>
+        <!-- 文件下载工具 -->
+        <!-- <div class="file-download-section">
+          <h2>文件下载工具</h2>
+
+          <div class="input-group">
+            <input type="text" v-model="downloadUrl" placeholder="请输入要下载的在线链接..." class="file-path-input">
+          </div>
+
+          <div class="input-group">
+            <input type="text" v-model="saveFileName" placeholder="请输入保存的文件名..." class="file-path-input">
+          </div>
+
+          <div class="download-path">
+            <label>下载目录：</label>
+            <span>{{ downloadDirectory }}</span>
+          </div>
+
+          <button @click="downloadFile" class="download-btn">
+            {{ isDownloading ? '下载中...' : '开始下载' }}
+          </button>
+          <div v-if="isDownloading" class="progress-container">
+            <div class="progress-bar">
+              <div class="progress" :style="{ width: downloadProgress + '%' }"></div>
+            </div>
+            <span class="progress-text">{{ downloadProgress }}%</span>
+          </div>
+
+          <div v-if="downloadMessage" :class="['message', downloadMessageType]">
+            {{ downloadMessage }}
+          </div>
+        </div> -->
+      </div>
+      <div class="mt20" v-else>
+        <el-table :data="tableData" :header-cell-style="{ background: '#F5F7FA' }" border>
+          <el-table-column prop="name" label="文件名称"> </el-table-column>
+          <el-table-column prop="path" label="路径"> </el-table-column>
+          <el-table-column prop="jmyy" label="解密原因"> </el-table-column>
+          <el-table-column prop="sj" label="申请时间"></el-table-column>
+        </el-table>
       </div>
     </div>
     <div v-else class="dzong">
-      <div class="dtitle">柯赛标识</div>
-      <div class="djs">解密申请</div>
-      <div class="dleft">登陆名</div>
-      <div> <el-input v-model="username" placeholder="请输入用户登陆名"></el-input> </div>
-      <div class="dleft">密码</div>
-      <div> <el-input v-model="userpwd" @keyup.enter="login" type="password" placeholder="请输入密码"></el-input> </div>
-      <div><el-button class="dbtn" type="primary" @click="login" v-debounce:2000="'登录'">登录</el-button></div>
+      <!-- <div class="lbg"></div> -->
+      <img src="./assets/bg.png" style="width: 250px;height: 250px;" alt="">
+      <div style="flex: 1;">
+        <div class="dtitle">柯赛标识</div>
+        <div class="djs">解密申请</div>
+        <div class="dleft">登陆名</div>
+        <div> <el-input v-model="username" placeholder="请输入用户登陆名"></el-input> </div>
+        <div class="dleft">密码</div>
+        <div> <el-input v-model="userpwd" @keyup.enter="login" type="password" placeholder="请输入密码"></el-input> </div>
+        <div><el-button class="dbtn" type="primary" @click="login" v-debounce:2000="'登录'">登录</el-button></div>
+      </div>
     </div>
   </div>
 </template>
@@ -86,6 +100,8 @@ export default {
   name: 'App',
   data() {
     return {
+      tableData: [],
+      radio1: '解密申请',
       filePath: '',
       message: '',
       messageType: 'info', // 'success', 'error', 'info'
@@ -102,16 +118,44 @@ export default {
       username: '',
       userpwd: '',
       jmlist: null,
+      jmyy: '',
+      xzobj: null,
       baseUrl: "https://cosunerp.signcc.com/cosunErp/",
     }
   },
   mounted() {
     this.userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    this.xzobj = {
+      key: 1760431459271,
+      url: 'https://cosunerp.signcc.com/production/20251014/853dd2b09c2c41ec9c09fd9971680b09.pdf'
+    }
+    console.log(this.xzobj, '初始化')
   },
   methods: {
+    formatDate(timestamp) {
+      const date = new Date(timestamp);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0'); // 月份是从0开始的
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    },
+    radioChange(val) {
+      if (val === '解密申请待审批列表') {
+        var cs = JSON.parse(localStorage.getItem('jmlist')) || [];
+        this.tableData = JSON.parse(localStorage.getItem('jmlist')) || [];
+        console.log(this.tableData, '舒服点', cs)
+      }
+    },
     submitjm() {
       if (this.wjlist.length === 0) {
         this.$message.error('请先上传文件');
+        return;
+      }
+      if (this.jmyy === '') {
+        this.$message.error('请输入解密原因');
         return;
       }
       var time = new Date().getTime();
@@ -119,11 +163,27 @@ export default {
         return {
           name: item.name,
           path: item.path,
-          key: time
+          key: time,
+          jmyy: this.jmyy,
+          sj: this.formatDate(time),
         }
       })
-      localStorage.setItem('jmlist', JSON.stringify(tjlist))
-      console.log(this.userInfo, '地方', this.wjlist)
+      const loading = this.$loading({
+        lock: true,
+        text: '处理中',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)',
+      })
+      setTimeout(() => {
+        this.$message.success('提交成功');
+        loading.close()
+        this.jmyy = '';
+        this.wjlist = [];
+        var zjmlist = JSON.parse(localStorage.getItem('jmlist')) || []
+        tjlist = tjlist.concat(zjmlist)
+        localStorage.setItem('jmlist', JSON.stringify(tjlist))
+      }, 3000)
+      // console.log(this.userInfo, '地方', this.wjlist)
     },
     clearuserInfo() {
       this.userInfo = undefined;
@@ -145,7 +205,7 @@ export default {
       const queryString = new URLSearchParams(obj).toString();
       const loading = this.$loading({
         lock: true,
-        text: 'Loading',
+        text: '处理中',
         spinner: 'el-icon-loading',
         background: 'rgba(0, 0, 0, 0.7)',
       })
@@ -160,9 +220,12 @@ export default {
         .then((data) => {
           loading.close()
           if (data.result === 0) {
+            var obj = data.data;
             this.userInfo = {
               username: this.username,
               userpwd: this.userpwd,
+              name: obj.realName,
+              dep: obj.depName,
             };
             localStorage.setItem('userInfo', JSON.stringify(this.userInfo));
             this.$message.success('登录成功');
@@ -240,14 +303,25 @@ export default {
     },
 
     // 下载文件
-    async downloadFile() {
-      console.log(JSON.parse(localStorage.getItem('jmlist')), '方法')
-      localStorage.removeItem('jmlist')
-      this.isDownloading = true
-      if (!this.downloadUrl || !this.saveFileName) {
-        this.showDownloadMessage('请先输入下载链接和保存文件名', 'info')
-        return
+    tihuan() {
+      var sclist = this.tableData.filter(item => item.key === this.xzobj.key)
+      var jmlist = this.tableData.filter(item => item.key !== this.xzobj.key)
+      if (sclist.length > 0) {
+        sclist.forEach(item => {
+          this.downloadFile(this.xzobj.url, item.name, item.path.split('\\').slice(0, -1).join('\\'))
+        })
       }
+      localStorage.setItem('jmlist', JSON.stringify(jmlist))
+      console.log(jmlist, 'obj', sclist, this.tableData)
+    },
+    async downloadFile(downloadUrl, saveFileName, downloadDirectory) {
+      // localStorage.removeItem('jmlist')
+
+      this.isDownloading = true
+      // if (!this.downloadUrl || !this.saveFileName) {
+      //   this.showDownloadMessage('请先输入下载链接和保存文件名', 'info')
+      //   return
+      // }
 
       try {
         // 在Electron环境中使用Node.js的模块下载文件
@@ -258,12 +332,12 @@ export default {
           const http = require('http')
 
           // 确保下载目录存在
-          if (!fs.existsSync(this.downloadDirectory)) {
-            fs.mkdirSync(this.downloadDirectory, { recursive: true })
+          if (!fs.existsSync(downloadDirectory)) {
+            fs.mkdirSync(downloadDirectory, { recursive: true })
           }
 
           // 完整的保存路径
-          const savePath = path.join(this.downloadDirectory, this.saveFileName)
+          const savePath = path.join(downloadDirectory, saveFileName)
 
           // 设置下载状态
           this.isDownloading = true
@@ -271,10 +345,10 @@ export default {
           this.showDownloadMessage('开始下载...', 'info')
 
           // 根据URL协议选择http或https模块
-          const protocol = this.downloadUrl.startsWith('https') ? https : http
+          const protocol = downloadUrl.startsWith('https') ? https : http
 
           await new Promise((resolve, reject) => {
-            const request = protocol.get(this.downloadUrl, (response) => {
+            const request = protocol.get(downloadUrl, (response) => {
               // 检查响应状态码
               if (response.statusCode !== 200) {
                 reject(new Error(`请求失败，状态码: ${response.statusCode}`))
@@ -346,18 +420,53 @@ export default {
 </script>
 
 <style>
-.lgot {
-  position: absolute;
-  left: 30px;
-  top: 10px;
+.el-upload-dragger {
+  height: 120px !important;
+  line-height: 36px !important;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.mt20 {
+  margin-top: 10px;
+}
+
+.d-fb {
+  display: flex;
+  justify-content: space-between;
+  align-content: center;
+}
+
+.ud {
+  color: rgba(0, 0, 0, 0.7);
+  margin-right: 20px;
+}
+
+.un {
+  font-weight: bold;
+}
+
+.lbg {
+  width: 250px;
+  height: 250px;
+  background: url(./assets/bg.png) no-repeat;
+  background-size: 100%;
 }
 
 .dzong {
-  width: 350px;
-  margin: 0 auto;
+  width: 500px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: rgba(153, 153, 153, 0.1);
   padding: 30px;
   border-radius: 20px;
+  display: flex;
+  align-items: center;
 }
 
 .dleft {
@@ -405,22 +514,23 @@ export default {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  margin-top: 60px;
 }
 
 .container {
   /* max-width: 800px; */
   margin: 0 auto;
-  /* min-width: 800px; */
+  min-width: 400px;
   padding: 20px;
 }
 
 .tjbtn {
   position: fixed;
-  bottom: 10px;
+  bottom: 20px;
   left: 0;
   width: 100%;
+  display: flex;
+  justify-content: center;
+
 }
 
 .file-delete-section {

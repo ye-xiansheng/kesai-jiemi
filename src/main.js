@@ -93,5 +93,16 @@ app.directive('debounce', {
     }
   }
 })
-
+const debounce = (fn, delay) => {
+  let timer = null;
+  return function() {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, arguments), delay);
+  }
+}
+window.ResizeObserver = class extends ResizeObserver {
+  constructor(callback) {
+    super(debounce(callback, 16)); // 16ms对应浏览器帧率
+  }
+}
 app.mount('#app')
