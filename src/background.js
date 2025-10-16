@@ -69,12 +69,19 @@ app.on('ready', async () => {
   if (!isDevelopment) {
     app.setLoginItemSettings({
       openAtLogin: true,
-      openAsHidden: false // 非隐藏方式启动
+      openAsHidden: true, // 隐藏方式启动
+      args: ['--hidden'] // 添加隐藏参数
     })
-    console.log('开机自启已设置')
+    console.log('开机自启已设置为后台隐藏式启动')
   }
   
-  createWindow()
+  // 检查是否通过开机自启启动，如果不是则创建窗口
+  const shouldShowWindow = !process.argv.includes('--hidden');
+  if (shouldShowWindow) {
+    createWindow();
+  } else {
+    console.log('应用以隐藏模式启动');
+  }
 })
 
 // Exit cleanly on request from parent process in development mode.

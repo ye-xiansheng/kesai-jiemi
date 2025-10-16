@@ -1,12 +1,23 @@
 <template>
   <div class="container">
+    <!-- WebSocket连接状态显示 -->
+    <div class="ws-status" :class="{ 'connected': wsConnected, 'disconnected': !wsConnected }">
+      <span v-if="wsConnected" class="status-dot connected"></span>
+      <span v-else class="status-dot disconnected"></span>
+      <span class="status-text">
+        {{ wsConnected ? 'WebSocket已连接' : 'WebSocket未连接' }}
+        <span v-if="reconnectAttempts > 0">(重连中: {{ reconnectAttempts }}/{{ maxReconnectAttempts }})</span>
+      </span>
+    </div>
+    
     <div v-if="userInfo">
       <div class="d-fb">
         <div>
           <span class="ud">{{ userInfo.dep }}</span>
           <span class="un">{{ userInfo.name }}</span>
         </div>
-        <el-button class="lgot" type="text" @click="clearuserInfo">退出登陆</el-button>
+        <span style="font-size: 13px;margin: 0;cursor: pointer;" class="ud" @click="clearuserInfo">退出登陆</span>
+        <!-- <el-button class="lgot" type="text" @click="clearuserInfo">退出登陆</el-button> -->
       </div>
       <el-radio-group v-model="radio1" @change="radioChange">
         <el-radio-button label="解密申请"></el-radio-button>
@@ -36,7 +47,9 @@
         <div class="tjbtn"><el-button style="width: 95%;" @click="submitjm" v-debounce:2000="'提交解密申请'"
             type="primary">提交解密申请</el-button></div>
 
-        <el-button class="mt20" @click="tihuan" type="primary">测试审批通过替换文件</el-button>
+        <!-- <el-button class="mt20" @click="tihuan" type="primary">测试审批通过替换文件</el-button> -->
+        <el-button class="mt20"  type="primary">电脑右下角弹窗消息</el-button>
+
         <!-- 文件下载工具 -->
         <!-- <div class="file-download-section">
           <h2>文件下载工具</h2>
@@ -121,17 +134,211 @@ export default {
       jmyy: '',
       xzobj: null,
       baseUrl: "https://cosunerp.signcc.com/cosunErp/",
+      // WebSocket相关状态
+      ws: null,
+      wsUrl: 'ws://172.16.112.21:9095/cosunErp/websocke',
+      wsConnected: false,
+      reconnectInterval: 5000, // 重连间隔(ms)
+      reconnectAttempts: 0,
+      maxReconnectAttempts: 10, // 最大重连次数
+      heartbeatInterval: 30000, // 心跳间隔(ms)
+      heartbeatTimer: null,
+      reconnectTimer: null
     }
   },
   mounted() {
+    // 初始化用户信息
     this.userInfo = JSON.parse(localStorage.getItem('userInfo'));
     this.xzobj = {
       key: 1760431459271,
       url: 'https://cosunerp.signcc.com/production/20251014/853dd2b09c2c41ec9c09fd9971680b09.pdf'
     }
     console.log(this.xzobj, '初始化')
+    
+    // 初始化WebSocket连接
+    // this.initWebSocket();
+  },
+  
+  // 组件卸载前清理WebSocket连接
+  beforeUnmount() {
+    // this.closeWebSocket();
   },
   methods: {
+    // 初始化WebSocket连接
+    initWebSocket() {
+      // 检查环境是否支持WebSocket
+      if (!('WebSocket' in window)) {
+        console.error('您的浏览器不支持WebSocket协议');
+        return;
+      }
+
+      try {
+        this.ws = new WebSocket(this.wsUrl);
+        
+        // 连接成功
+        this.ws.onopen = this.onWebSocketOpen;
+        
+        // 接收消息
+        this.ws.onmessage = this.onWebSocketMessage;
+        
+        // 连接关闭
+        this.ws.onclose = this.onWebSocketClose;
+        
+        // 连接错误
+        this.ws.onerror = this.onWebSocketError;
+        
+        console.log('正在尝试连接WebSocket服务器...');
+      } catch (error) {
+        console.error('WebSocket初始化失败:', error);
+        this.reconnect();
+      }
+    },
+    
+    // WebSocket连接成功
+    onWebSocketOpen() {
+      console.log('WebSocket连接成功');
+      this.wsConnected = true;
+      this.reconnectAttempts = 0;
+      
+      // 启动心跳
+      this.startHeartbeat();
+      
+      // 可以在这里发送认证信息或其他初始化数据
+      // this.sendWebSocketMessage({ type: 'auth', data: '认证信息' });
+    },
+    
+    // 接收WebSocket消息
+    onWebSocketMessage(event) {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('接收到WebSocket消息:', data);
+        
+        // 根据消息类型处理
+        switch (data.type) {
+          case 'pong':
+            // 收到心跳响应
+            console.log('收到心跳响应');
+            break;
+          case 'notification':
+            // 处理通知消息
+            this.handleNotification(data);
+            break;
+          default:
+            // 处理其他类型的消息
+            this.handleOtherMessages(data);
+        }
+      } catch (error) {
+        console.error('解析WebSocket消息失败:', error);
+        // 处理非JSON格式的消息
+        console.log('收到非JSON格式消息:', event.data);
+      }
+    },
+    
+    // WebSocket连接关闭
+    onWebSocketClose(event) {
+      console.log('WebSocket连接关闭', event.code, event.reason);
+      this.wsConnected = false;
+      
+      // 停止心跳
+      this.stopHeartbeat();
+      
+      // 如果不是手动关闭，尝试重连
+      if (event.code !== 1000) {
+        this.reconnect();
+      }
+    },
+    
+    // WebSocket连接错误
+    onWebSocketError(error) {
+      console.error('WebSocket连接错误:', error);
+    },
+    
+    // 发送WebSocket消息
+    sendWebSocketMessage(message) {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        try {
+          const msg = typeof message === 'string' ? message : JSON.stringify(message);
+          this.ws.send(msg);
+          console.log('发送WebSocket消息:', message);
+        } catch (error) {
+          console.error('发送WebSocket消息失败:', error);
+        }
+      } else {
+        console.warn('WebSocket未连接，无法发送消息');
+      }
+    },
+    
+    // 启动心跳
+    startHeartbeat() {
+      this.stopHeartbeat();
+      this.heartbeatTimer = setInterval(() => {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this.sendWebSocketMessage({ type: 'ping' });
+        }
+      }, this.heartbeatInterval);
+    },
+    
+    // 停止心跳
+    stopHeartbeat() {
+      if (this.heartbeatTimer) {
+        clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = null;
+      }
+    },
+    
+    // 重连机制
+    reconnect() {
+      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        console.error(`已达到最大重连次数(${this.maxReconnectAttempts})，停止重连`);
+        return;
+      }
+      
+      // 清除之前的重连定时器
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+      }
+      
+      this.reconnectAttempts++;
+      const delay = this.reconnectInterval * Math.min(2 * this.reconnectAttempts, 30); // 指数退避，但不超过30倍
+      
+      console.log(`将在${delay}ms后进行第${this.reconnectAttempts}次重连...`);
+      
+      this.reconnectTimer = setTimeout(() => {
+        this.initWebSocket();
+      }, delay);
+    },
+    
+    // 关闭WebSocket连接
+    closeWebSocket() {
+      this.stopHeartbeat();
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      
+      if (this.ws) {
+        this.ws.close(1000, '手动关闭');
+        this.ws = null;
+      }
+      
+      this.wsConnected = false;
+      console.log('WebSocket连接已手动关闭');
+    },
+    
+    // 处理通知消息
+    handleNotification(data) {
+      console.log('处理通知消息:', data);
+      // 这里可以根据需要显示通知给用户
+      // this.$message.info(data.content);
+    },
+    
+    // 处理其他消息
+    handleOtherMessages(data) {
+      console.log('处理其他消息:', data);
+      // 这里可以根据具体业务需求处理其他类型的消息
+    },
+    
+    // 格式化日期时间
     formatDate(timestamp) {
       const date = new Date(timestamp);
       const year = date.getFullYear();
@@ -430,6 +637,64 @@ body {
   padding: 0;
 }
 
+/* WebSocket连接状态样式 */
+.ws-status {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 10px 15px;
+  border-radius: 20px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.ws-status.connected {
+  background-color: rgba(64, 169, 77, 0.9);
+}
+
+.ws-status.disconnected {
+  background-color: rgba(245, 108, 108, 0.9);
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.connected {
+  background-color: #40A94E;
+}
+
+.status-dot.disconnected {
+  background-color: #F56C6C;
+  animation: none;
+}
+
+.status-text {
+  font-family: PingFang SC, sans-serif;
+  font-weight: 500;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(64, 169, 77, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(64, 169, 77, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(64, 169, 77, 0);
+  }
+}
+
 .mt20 {
   margin-top: 10px;
 }
@@ -438,6 +703,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-content: center;
+  margin-bottom: 10px;
 }
 
 .ud {
@@ -521,6 +787,7 @@ body {
   margin: 0 auto;
   min-width: 400px;
   padding: 20px;
+  padding-bottom: 60px;
 }
 
 .tjbtn {
