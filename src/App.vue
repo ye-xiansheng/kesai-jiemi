@@ -48,8 +48,7 @@
             type="primary">提交解密申请</el-button></div>
 
         <!-- <el-button class="mt20" @click="tihuan" type="primary">测试审批通过替换文件</el-button> -->
-        <el-button class="mt20"  type="primary">电脑右下角弹窗消息</el-button>
-
+        <el-button class="mt20" @click="showPersistentNotification" type="primary">电脑右下角弹窗消息</el-button>
         <!-- 文件下载工具 -->
         <!-- <div class="file-download-section">
           <h2>文件下载工具</h2>
@@ -621,6 +620,65 @@ export default {
       setTimeout(() => {
         this.downloadMessage = ''
       }, 3000)
+    },
+    
+    // 显示桌面通知（只有用户点击才会消失）
+    showPersistentNotification() {
+      try {
+        // 检查是否在Electron环境中
+        if (window && window.process && window.process.type) {
+          console.log('通过IPC请求主进程显示持久化通知');
+          
+          try {
+            // 使用electron的ipcRenderer向主进程发送消息
+            const { ipcRenderer } = require('electron');
+            
+            // 发送通知请求到主进程
+            ipcRenderer.send('show-persistent-notification');
+            
+            // 监听主进程的回复
+            ipcRenderer.once('notification-shown', (event, arg) => {
+              console.log('通知请求已处理:', arg);
+            });
+            
+            // 提示用户通知已请求
+            this.$message.success('通知请求已发送');
+          } catch (e) {
+            console.error('IPC通信失败:', e);
+            // 如果IPC失败，尝试备选方案
+            this.fallbackNotificationMethod();
+          }
+        } else {
+          // 非Electron环境下的备选方案
+          this.fallbackNotificationMethod();
+        }
+      } catch (error) {
+        console.error('显示通知失败:', error);
+        this.$message.error('显示通知失败，请检查权限设置');
+      }
+    },
+    
+    // 备选通知方法（非Electron环境或IPC失败时使用）
+    fallbackNotificationMethod() {
+      if ('Notification' in window) {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            const notification = new Notification('系统通知2', {
+              body: '这是一条来自柯赛解密申请系统的桌面通知！',
+              icon: 'https://cosunerp.signcc.com/production/20251016/e515897959174c249a68ed17a4b5597a.png',
+              requireInteraction: true // 请求用户交互，不会自动关闭
+            });
+            
+            notification.onclick = () => {
+              console.log('用户点击了备选通知');
+            };
+          } else {
+            this.$message.error('需要通知权限才能显示桌面通知');
+          }
+        });
+      } else {
+        this.$message.error('您的环境不支持桌面通知');
+      }
     }
   }
 }
