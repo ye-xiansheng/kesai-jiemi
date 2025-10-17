@@ -48,6 +48,7 @@
             type="primary">提交解密申请</el-button></div>
 
         <!-- <el-button class="mt20" @click="tihuan" type="primary">测试审批通过替换文件</el-button> -->
+         <el-input placeholder="请输入审核状态" v-model="ztvalue"></el-input>
         <el-button class="mt20" @click="xiaoxits" type="primary">电脑右下角弹窗消息</el-button>
         <!-- 文件下载工具 -->
         <!-- <div class="file-download-section">
@@ -145,6 +146,7 @@ export default {
       reconnectTimer: null,
       cstime: null,
       csnum: 1,
+      ztvalue: '',
     }
   },
   mounted() {
@@ -638,7 +640,7 @@ export default {
       // 从列表中获取审核状态，如果没有则默认为'审核通过'
       // 假设列表项中有一个status字段表示审核状态
       // var auditStatus = list[0].status || '审核通过';
-      var auditStatus = '审核通过';
+      var auditStatus = this.ztvalue===''?'审核通过':this.ztvalue;
       this.showPersistentNotification(xx, list[0].path, auditStatus);
     },
     // 显示桌面通知（只有用户点击才会消失）
