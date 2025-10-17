@@ -69,7 +69,7 @@
         .status-info {
             margin-bottom: 8px;
             font-size: 14px;
-            color: #4a90e2;
+            /* color: #4a90e2; */
         }
         .notification-button {
             background-color: #4a90e2;
@@ -86,6 +86,10 @@
         .notification-button:hover {
             background-color: #357abd;
         }
+        #status-sh{
+            font-weight: bold;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -96,51 +100,75 @@
         <div class="notification-content">
             <div class="notification-title" id="notification-title">柯赛解密申请消息通知</div>
             <div class="notification-body" id="notification-body">这是一条来自柯赛解密申请系统的桌面通知！</div>
-            <div class="status-info"><span>文件解密申请</span> <span>审核已通过</span></div>
+            <div class="status-info"><span>文件解密申请</span> <span id="status-sh">审核已通过</span></div>
             <button class="notification-button" id="notification-button">查看</button>
         </div>
     </div>
 
     <script>
         // 设置通知内容
-        window.setNotificationContent = function(title, body, filePath) {
-            try {
-                document.getElementById('notification-title').textContent = title || '柯赛解密申请消息通知';
-                document.getElementById('notification-body').textContent = body || '这是一条来自柯赛解密申请系统的桌面通知！';
-                
-                // 存储文件路径用于点击按钮时使用
-                window.filePath = filePath;
-                console.log('通知内容已设置:', {title, body, filePath});
-            } catch (error) {
-                console.error('设置通知内容失败:', error);
-            }
-        };
+          window.setNotificationContent = function(title, body, filePath, auditStatus) {
+              try {
+                  document.getElementById('notification-title').textContent = title || '柯赛解密申请消息通知';
+                  document.getElementById('notification-body').textContent = body || '这是一条来自柯赛解密申请系统的桌面通知！';
+                  
+                  // 设置审核状态
+                  const statusElement = document.getElementById('status-sh');
+                  if (statusElement) {
+                      statusElement.textContent = auditStatus === '审核拒绝' ? '审核已拒绝' : '审核已通过';
+                      // 根据审核状态更改状态文字颜色
+                      statusElement.style.color = auditStatus === '审核拒绝' ? '#e74c3c' : '#2ecc71';
+                  }
+                  
+                  // 存储文件路径和审核状态
+                  window.filePath = filePath;
+                  window.auditStatus = auditStatus || '审核通过';
+                  
+                  // 根据审核状态更新按钮文本
+                  const buttonElement = document.getElementById('notification-button');
+                  if (buttonElement) {
+                      buttonElement.textContent = auditStatus === '审核拒绝' ? '关闭' : '查看';
+                  }
+                  
+                  console.log('通知内容已设置:', {title, body, filePath, auditStatus});
+              } catch (error) {
+                  console.error('设置通知内容失败:', error);
+              }
+          };
         
         // 只使用标准的Electron ipcRenderer方式
         try {
             // 获取Electron的IPC功能
             const { ipcRenderer } = require('electron');
             
-            // 点击查看按钮
+            // 点击按钮处理
             document.getElementById('notification-button').addEventListener('click', function() {
                 try {
-                    console.log('点击了查看按钮，文件路径:', window.filePath);
-                    ipcRenderer.send('notification-action', { action: 'view', filePath: window.filePath });
-                    // 用户点击后关闭通知窗口
+                    console.log('点击了按钮，审核状态:', window.auditStatus, '文件路径:', window.filePath);
+                    
+                    // 只有当审核通过时才发送查看操作
+                    if (window.auditStatus === '审核通过') {
+                        ipcRenderer.send('notification-action', { action: 'view', filePath: window.filePath });
+                    }
+                    // 无论何种状态都关闭窗口
                     window.close();
                 } catch (error) {
                     console.error('点击按钮处理失败:', error);
                 }
             });
             
-            // 点击通知本身（但不是按钮）也触发查看操作
+            // 点击通知本身（但不是按钮）的处理
             document.querySelector('.notification-container').addEventListener('click', function(event) {
                 try {
                     // 如果点击的不是按钮，则处理通知点击
                     if (!event.target.closest('.notification-button')) {
-                        console.log('点击了通知区域，文件路径:', window.filePath);
-                        ipcRenderer.send('notification-action', { action: 'view', filePath: window.filePath });
-                        // 用户点击后关闭通知窗口
+                        console.log('点击了通知区域，审核状态:', window.auditStatus, '文件路径:', window.filePath);
+                        
+                        // 只有当审核通过时才发送查看操作
+                        if (window.auditStatus === '审核通过') {
+                            ipcRenderer.send('notification-action', { action: 'view', filePath: window.filePath });
+                        }
+                        // 无论何种状态都关闭窗口
                         window.close();
                     }
                 } catch (error) {

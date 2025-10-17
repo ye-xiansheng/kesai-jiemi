@@ -347,7 +347,7 @@ app.on("ready", async () => {
 });
 
 // 持久化通知函数 - 使用自定义HTML页面替代系统通知
-function showPersistentNotification(body, filePath) {
+function showPersistentNotification(body, filePath, auditStatus = '审核通过') {
   console.log('显示自定义持久化通知', { body, filePath });
   
   try {
@@ -480,26 +480,69 @@ function showPersistentNotification(body, filePath) {
         <div class="notification-content">
             <div class="notification-title">柯赛解密申请消息通知</div>
             <div class="notification-body">${body || '这是一条来自柯赛解密申请系统的桌面通知！'}</div>
-            <div class="status-info"><span>文件解密申请</span> <span>审核已通过</span></div>
-            <button class="notification-button">查看</button>
+            <div class="status-info"><span>文件解密申请</span> <span id="status-sh">审核已通过</span></div>
+              <button class="notification-button" id="notification-button">查看</button>
         </div>
     </div>
     <script>
         (function() {
             const { ipcRenderer } = require('electron');
-            const filePath = '${filePath || ''}';
+              const filePath = '${filePath || ''}';
+              // 存储文件路径和默认审核状态
+              window.filePath = filePath;
+              window.auditStatus = '${auditStatus || '审核通过'}';
+              
+              // 设置通知内容的全局函数
+              window.setNotificationContent = function(title, body, filePath, auditStatus) {
+                  // 设置标题和内容
+                  if (document.querySelector('.notification-title')) {
+                      document.querySelector('.notification-title').textContent = title || '柯赛解密申请消息通知';
+                  }
+                  if (document.querySelector('.notification-body')) {
+                      document.querySelector('.notification-body').textContent = body || '这是一条来自柯赛解密申请系统的桌面通知！';
+                  }
+                  
+                  // 设置审核状态
+                  const statusElement = document.getElementById('status-sh');
+                  if (statusElement) {
+                      statusElement.textContent = auditStatus === '审核拒绝' ? '审核已拒绝' : '审核已通过';
+                      // 根据审核状态更改状态文字颜色
+                      statusElement.style.color = auditStatus === '审核拒绝' ? '#e74c3c' : '#2ecc71';
+                  }
+                  
+                  // 更新按钮文本
+                  const buttonElement = document.getElementById('notification-button');
+                  if (buttonElement) {
+                      buttonElement.textContent = auditStatus === '审核拒绝' ? '关闭' : '查看';
+                  }
+                  
+                  // 存储文件路径和审核状态
+                  window.filePath = filePath;
+                  window.auditStatus = auditStatus || '审核通过';
+              };
             
-            document.querySelector('.notification-button').addEventListener('click', function() {
-                ipcRenderer.send('notification-action', { action: 'view', filePath: filePath });
-                window.close();
-            });
-            
-            document.querySelector('.notification-container').addEventListener('click', function(e) {
-                if (!e.target.closest('.notification-button')) {
-                    ipcRenderer.send('notification-action', { action: 'view', filePath: filePath });
-                    window.close();
-                }
-            });
+            // 点击按钮处理
+              document.getElementById('notification-button').addEventListener('click', function() {
+                  // 只有当审核通过时才发送查看操作
+                  if (window.auditStatus === '审核通过') {
+                      ipcRenderer.send('notification-action', { action: 'view', filePath: window.filePath || filePath });
+                  }
+                  // 无论何种状态都关闭窗口
+                  window.close();
+              });
+              
+              // 点击通知本身（但不是按钮）的处理
+              document.querySelector('.notification-container').addEventListener('click', function(e) {
+                  // 如果点击的不是按钮，则处理通知点击
+                  if (!e.target.closest('.notification-button')) {
+                      // 只有当审核通过时才发送查看操作
+                      if (window.auditStatus === '审核通过') {
+                          ipcRenderer.send('notification-action', { action: 'view', filePath: window.filePath || filePath });
+                      }
+                      // 无论何种状态都关闭窗口
+                      window.close();
+                  }
+              });
             
             setTimeout(() => {
                 ipcRenderer.send('notification-loaded');
@@ -545,15 +588,17 @@ function showPersistentNotification(body, filePath) {
       // 使用更安全的方式传递参数，避免模板字符串转义问题
       const safeTitle = '柯赛解密申请消息通知';
       const safeBody = body || '这是一条来自柯赛解密申请系统的桌面通知！';
-      const safeFilePath = filePath || '';
-      
-      // 使用JSON.stringify确保特殊字符被正确转义
-      notificationWindow.webContents.executeJavaScript(
-        `window.setNotificationContent(
-          ${JSON.stringify(safeTitle)},
-          ${JSON.stringify(safeBody)},
-          ${JSON.stringify(safeFilePath)}
-        );`
+        const safeFilePath = filePath || '';
+        const safeAuditStatus = auditStatus || '审核通过';
+        
+        // 使用JSON.stringify确保特殊字符被正确转义
+        notificationWindow.webContents.executeJavaScript(
+          `window.setNotificationContent(
+            ${JSON.stringify(safeTitle)},
+            ${JSON.stringify(safeBody)},
+            ${JSON.stringify(safeFilePath)},
+            ${JSON.stringify(safeAuditStatus)}
+          );`
       );
       
       // 显示窗口（如果隐藏的话）
@@ -710,13 +755,14 @@ function showPersistentNotification(body, filePath) {
   }
 }
 
-// IPC通信设置 - 监听来自渲染进程的通知请求
-ipcMain.on('show-persistent-notification', (event, data) => {
-  console.log('收到渲染进程的通知请求', data);
-  // 提取body和filePath参数
-  const body = data && data.body ? data.body : undefined;
-  const filePath = data && data.filePath ? data.filePath : undefined;
-  showPersistentNotification(body, filePath);
+// 处理渲染进程发送的通知请求
+  ipcMain.on('show-persistent-notification', (event, data) => {
+    console.log('收到渲染进程的通知请求', data);
+    // 提取参数
+    const body = data && data.body ? data.body : undefined;
+    const filePath = data && data.filePath ? data.filePath : undefined;
+    const auditStatus = data && data.auditStatus ? data.auditStatus : '审核通过';
+    showPersistentNotification(body, filePath, auditStatus);
   // 回复渲染进程通知已发送
   event.reply('notification-shown', { success: true });
 });

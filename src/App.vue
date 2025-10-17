@@ -629,36 +629,31 @@ export default {
         this.downloadMessage = ''
       }, 3000)
     },
-    xiaoxits(){
+    xiaoxits() {
       var list = JSON.parse(localStorage.getItem('jmlist'));
       var sj = list[0].sj;
-      var name = list.map(item=> item.name)
-      var xx = `您于${sj}发起的啊${name.toString()}`
+      var name = list.map(item => item.name);
+      var xx = `您于${sj}发起的${name.toString()}`;
       
-      // 如果有文件路径，可以传递给通知
-      // const filePaths = this.wjlist.map(item => item.path);
-      // if (filePaths.length > 0) {
-      //   // 使用第一个文件路径作为示例
-      //   this.showPersistentNotification(xx, filePaths[0])
-      //   console.log('带文件路径的通知已发送:', { message: xx, filePath: filePaths[0] })
-      // } else {
-        this.showPersistentNotification(xx, list[0].path)
-        // console.log(xx, 'ss', list[0].path)
-      // }
+      // 从列表中获取审核状态，如果没有则默认为'审核通过'
+      // 假设列表项中有一个status字段表示审核状态
+      // var auditStatus = list[0].status || '审核通过';
+      var auditStatus = '审核通过';
+      this.showPersistentNotification(xx, list[0].path, auditStatus);
     },
     // 显示桌面通知（只有用户点击才会消失）
-    showPersistentNotification(body = '这是一条来自柯赛解密申请系统的桌面通知！', filePath = null) {
+    showPersistentNotification(body = '这是一条来自柯赛解密申请系统的桌面通知！', filePath = null, auditStatus = '审核通过') {
       try {
         // 检查是否在Electron环境中
         if (window && window.process && window.process.type) {
-          console.log('通过IPC请求主进程显示持久化通知', { body, filePath });
+          console.log('通过IPC请求主进程显示持久化通知', { body, filePath, auditStatus });
           
           try {
             // 使用electron的ipcRenderer向主进程发送消息
             const { ipcRenderer } = require('electron');
             
-            // 发送通知请求到主进程，带上body和filePath参数
-            ipcRenderer.send('show-persistent-notification', { body, filePath });
+            // 发送通知请求到主进程，带上body、filePath和auditStatus参数
+            ipcRenderer.send('show-persistent-notification', { body, filePath, auditStatus });
             
             // 监听主进程的回复
             ipcRenderer.once('notification-shown', (event, arg) => {
