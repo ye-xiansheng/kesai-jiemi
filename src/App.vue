@@ -155,13 +155,13 @@ export default {
       url: 'https://cosunerp.signcc.com/production/20251014/853dd2b09c2c41ec9c09fd9971680b09.pdf'
     }
     console.log(this.xzobj, '初始化')
-   this.cstime = setInterval(()=>{
-      this.csnum++
-      this.xiaoxits()
-      if(this.csnum>2){
-        clearInterval(this.cstime)
-      }
-    },10000)
+  //  this.cstime = setInterval(()=>{
+  //     this.csnum++
+  //     this.xiaoxits()
+  //     if(this.csnum>2){
+  //       clearInterval(this.cstime)
+  //     }
+  //   },10000)
     // 初始化WebSocket连接
     // this.initWebSocket();
   },
