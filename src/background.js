@@ -464,7 +464,6 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
             font-size: 14px;
             font-weight: bold;
         }
-        }
         .notification-icon {
             width: 56px;
             height: 56px;
