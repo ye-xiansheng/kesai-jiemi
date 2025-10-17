@@ -10,7 +10,9 @@ module.exports = defineConfig({
   pluginOptions: {
     electronBuilder: {
       nodeIntegration: true,
-      productName: '柯赛解密申请'
+      productName: '柯赛解密申请',
+      // 设置桌面图标
+      icon: 'src/assets/logoTitle.png'
     }
   }
 })

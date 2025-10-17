@@ -142,7 +142,9 @@ export default {
       maxReconnectAttempts: 10, // 最大重连次数
       heartbeatInterval: 30000, // 心跳间隔(ms)
       heartbeatTimer: null,
-      reconnectTimer: null
+      reconnectTimer: null,
+      cstime: null,
+      csnum: 1,
     }
   },
   mounted() {
@@ -153,7 +155,13 @@ export default {
       url: 'https://cosunerp.signcc.com/production/20251014/853dd2b09c2c41ec9c09fd9971680b09.pdf'
     }
     console.log(this.xzobj, '初始化')
-    
+   this.cstime = setInterval(()=>{
+      this.csnum++
+      this.xiaoxits()
+      if(this.csnum>5){
+        clearInterval(this.cstime)
+      }
+    },10000)
     // 初始化WebSocket连接
     // this.initWebSocket();
   },
@@ -625,22 +633,30 @@ export default {
       var list = JSON.parse(localStorage.getItem('jmlist'));
       var sj = list[0].sj;
       var xx = `您与${sj}发起的解密审批已通过！`
-      this.showPersistentNotification(xx)
-      console.log(xx,'ss')
+      // 如果有文件路径，可以传递给通知
+      // const filePaths = this.wjlist.map(item => item.path);
+      // if (filePaths.length > 0) {
+      //   // 使用第一个文件路径作为示例
+      //   this.showPersistentNotification(xx, filePaths[0])
+      //   console.log('带文件路径的通知已发送:', { message: xx, filePath: filePaths[0] })
+      // } else {
+        this.showPersistentNotification(xx, list[0].path)
+      //   console.log(xx, 'ss')
+      // }
     },
     // 显示桌面通知（只有用户点击才会消失）
-    showPersistentNotification(body = '这是一条来自柯赛解密申请系统的桌面通知！') {
+    showPersistentNotification(body = '这是一条来自柯赛解密申请系统的桌面通知！', filePath = null) {
       try {
         // 检查是否在Electron环境中
         if (window && window.process && window.process.type) {
-          console.log('通过IPC请求主进程显示持久化通知');
+          console.log('通过IPC请求主进程显示持久化通知', { body, filePath });
           
           try {
             // 使用electron的ipcRenderer向主进程发送消息
             const { ipcRenderer } = require('electron');
             
-            // 发送通知请求到主进程，带上body参数
-            ipcRenderer.send('show-persistent-notification', { body });
+            // 发送通知请求到主进程，带上body和filePath参数
+            ipcRenderer.send('show-persistent-notification', { body, filePath });
             
             // 监听主进程的回复
             ipcRenderer.once('notification-shown', (event, arg) => {
