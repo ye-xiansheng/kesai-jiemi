@@ -436,6 +436,34 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
             align-items: center;
             width: 100%;
             height: 100%;
+            position: relative;
+        }
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            border: none;
+            background-color: #f5f5f5;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-app-region: no-drag;
+            z-index: 10;
+            transition: background-color 0.2s;
+        }
+        .close-button:hover {
+            background-color: #e0e0e0;
+        }
+        .close-button::after {
+            content: '✕';
+            color: #666666;
+            font-size: 14px;
+            font-weight: bold;
+        }
         }
         .notification-icon {
             width: 56px;
@@ -488,6 +516,7 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
 </head>
 <body>
     <div class="notification-container">
+        <button class="close-button" id="close-button"></button>
         <div class="notification-icon">🔒</div>
         <div class="notification-content">
             <div class="notification-title">柯赛解密申请消息通知</div>
@@ -535,7 +564,14 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
                   window.auditStatus = auditStatus || '审核通过';
               };
             
-            // 点击按钮处理
+            // 点击关闭按钮处理
+              document.getElementById('close-button').addEventListener('click', function(event) {
+                  event.stopPropagation(); // 阻止事件冒泡
+                  console.log('点击了关闭按钮');
+                  window.close();
+              });
+              
+              // 点击按钮处理
               document.getElementById('notification-button').addEventListener('click', function() {
                   // 只有当审核通过时才发送查看操作
                   if (window.auditStatus === '审核通过') {
@@ -547,8 +583,8 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
               
               // 点击通知本身（但不是按钮）的处理
               document.querySelector('.notification-container').addEventListener('click', function(e) {
-                  // 如果点击的不是按钮，则处理通知点击
-                  if (!e.target.closest('.notification-button')) {
+                  // 如果点击的不是任何按钮，则处理通知点击
+                  if (!e.target.closest('.notification-button') && !e.target.closest('.close-button')) {
                       // 只有当审核通过时才发送查看操作
                       if (window.auditStatus === '审核通过') {
                           ipcRenderer.send('notification-action', { action: 'view', filePath: window.filePath || filePath });
