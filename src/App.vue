@@ -633,7 +633,7 @@ export default {
       var list = JSON.parse(localStorage.getItem('jmlist'));
       var sj = list[0].sj;
       var name = list.map(item=> item.name)
-      var xx = `您与${sj}发起的${name.slice(0,2).toString()}${name.length>2?'等':''}相关文件解密审批已通过！`
+      var xx = `您于${sj}发起的啊${name.toString()}`
       
       // 如果有文件路径，可以传递给通知
       // const filePaths = this.wjlist.map(item => item.path);

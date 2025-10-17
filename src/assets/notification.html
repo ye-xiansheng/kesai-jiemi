@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>柯赛解密申请消息通知</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            width: 360px;
+            height: 190px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            user-select: none;
+            -webkit-app-region: drag;
+            background-color: #ffffff;
+        }
+        .notification-container {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            width: 360px;
+            height: 190px;
+        }
+        .notification-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            margin-right: 16px;
+            background-color: #4a90e2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+            -webkit-app-region: no-drag;
+        }
+        .notification-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            -webkit-app-region: no-drag;
+        }
+        .notification-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333333;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .notification-body {
+            font-size: 14px;
+            color: #666666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        .status-info {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #4a90e2;
+        }
+        .notification-button {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 4px;
+            -webkit-app-region: no-drag;
+            transition: background-color 0.2s;
+        }
+        .notification-button:hover {
+            background-color: #357abd;
+        }
+    </style>
+</head>
+<body>
+    <div class="notification-container">
+        <div class="notification-icon">
+            <span id="notification-icon">🔒</span>
+        </div>
+        <div class="notification-content">
+            <div class="notification-title" id="notification-title">柯赛解密申请消息通知</div>
+            <div class="notification-body" id="notification-body">这是一条来自柯赛解密申请系统的桌面通知！</div>
+            <div class="status-info"><span>文件解密申请</span> <span>审核已通过</span></div>
+            <button class="notification-button" id="notification-button">查看</button>
+        </div>
+    </div>
+
+    <script>
+        // 设置通知内容
+        window.setNotificationContent = function(title, body, filePath) {
+            try {
+                document.getElementById('notification-title').textContent = title || '柯赛解密申请消息通知';
+                document.getElementById('notification-body').textContent = body || '这是一条来自柯赛解密申请系统的桌面通知！';
+                
+                // 存储文件路径用于点击按钮时使用
+                window.filePath = filePath;
+                console.log('通知内容已设置:', {title, body, filePath});
+            } catch (error) {
+                console.error('设置通知内容失败:', error);
+            }
+        };
+        
+        // 只使用标准的Electron ipcRenderer方式
+        try {
+            // 获取Electron的IPC功能
+            const { ipcRenderer } = require('electron');
+            
+            // 点击查看按钮
+            document.getElementById('notification-button').addEventListener('click', function() {
+                try {
+                    console.log('点击了查看按钮，文件路径:', window.filePath);
+                    ipcRenderer.send('notification-action', { action: 'view', filePath: window.filePath });
+                    // 用户点击后关闭通知窗口
+                    window.close();
+                } catch (error) {
+                    console.error('点击按钮处理失败:', error);
+                }
+            });
+            
+            // 点击通知本身（但不是按钮）也触发查看操作
+            document.querySelector('.notification-container').addEventListener('click', function(event) {
+                try {
+                    // 如果点击的不是按钮，则处理通知点击
+                    if (!event.target.closest('.notification-button')) {
+                        console.log('点击了通知区域，文件路径:', window.filePath);
+                        ipcRenderer.send('notification-action', { action: 'view', filePath: window.filePath });
+                        // 用户点击后关闭通知窗口
+                        window.close();
+                    }
+                } catch (error) {
+                    console.error('点击通知处理失败:', error);
+                }
+            });
+            
+            // 通知页面加载完成后通知主进程
+            window.addEventListener('load', function() {
+                try {
+                    console.log('通知页面加载完成');
+                    ipcRenderer.send('notification-loaded');
+                } catch (error) {
+                    console.error('发送加载完成通知失败:', error);
+                }
+            });
+        } catch (error) {
+            console.error('初始化IPC通信失败:', error);
+        }
+        
+        // 添加基本的DOM加载检查
+        if (typeof document !== 'undefined') {
+            console.log('DOM可用，通知页面加载状态正常');
+        } else {
+            console.error('DOM不可用，通知页面可能加载异常');
+        }
+    </script>
+</body>
+</html>

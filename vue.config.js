@@ -33,6 +33,11 @@ module.exports = defineConfig({
         {
           from: 'src/assets/logoTitle.png',
           to: 'logoTitle.png'
+        },
+        // 添加通知HTML文件到资源中
+        {
+          from: 'src/assets/notification.html',
+          to: 'src/assets/notification.html'
         }
       ],
       // 构建选项
@@ -46,6 +51,11 @@ module.exports = defineConfig({
               from: 'src/assets',
               to: '.',
               filter: ['logoTitle.png']
+            },
+            // 添加通知HTML文件
+            {
+              from: 'src/assets/notification.html',
+              to: 'notification.html'
             }
           ]
         },
@@ -62,7 +72,8 @@ module.exports = defineConfig({
             from: 'src/assets',
             to: 'src/assets',
             filter: ['**/*']
-          }
+          },
+          'src/assets/notification.html'
         ]
       }
     }

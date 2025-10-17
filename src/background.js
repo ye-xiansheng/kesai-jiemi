@@ -1,6 +1,7 @@
 "use strict";
 
 import { app, protocol, BrowserWindow, ipcMain, Notification, Tray, Menu, shell } from "electron";
+import fs from 'fs';
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS3_DEVTOOLS } from "electron-devtools-installer";
 import path from 'path';
@@ -345,203 +346,368 @@ app.on("ready", async () => {
   }
 });
 
-// 持久化通知函数 - 确保通知不会自动关闭
+// 持久化通知函数 - 使用自定义HTML页面替代系统通知
 function showPersistentNotification(body, filePath) {
-  console.log('显示持久化通知', { body, filePath });
+  console.log('显示自定义持久化通知', { body, filePath });
   
-  // 创建通知配置
-  const notificationOptions = {
-    title: '柯赛解密申请消息通知',
-    body: body || '这是一条来自柯赛解密申请系统的桌面通知！',
-    requireInteraction: true, // 关键设置：要求用户交互才能关闭
-    urgency: 'critical', // 设置为最高优先级
-    closeButtonText: '查看',
-  };
-  
-  // 处理图标路径 - 确保在开发和打包环境都能正常工作
   try {
-    // 由于在vue.config.js中设置了asar: false，我们需要调整路径处理
-    let iconPath = null;
-    const fs = require('fs');
+    // 创建一个无边框窗口作为自定义通知
+    const notificationWindow = new BrowserWindow({
+        width: 360,
+        height: 190,
+        frame: false, // 无边框
+        resizable: false,
+        minimizable: false,
+        maximizable: false,
+        fullscreenable: false,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+            enableRemoteModule: true
+          }
+      });
     
-    // 收集所有可能的图标路径
-    const potentialPaths = [];
-    
-    if (app.isPackaged) {
-      // 打包环境 - 添加更多可能的路径
-      // 1. 直接在resources目录下
-      potentialPaths.push(path.join(process.resourcesPath, 'src', 'assets', 'logoTitle.png'));
-      // 2. 在应用可执行文件所在目录
-      potentialPaths.push(path.join(process.execPath, '..', 'src', 'assets', 'logoTitle.png'));
-      // 3. 应用当前工作目录
-      potentialPaths.push(path.join(process.cwd(), 'src', 'assets', 'logoTitle.png'));
-      // 4. 不使用src子目录，直接在resources/assets下
-      potentialPaths.push(path.join(process.resourcesPath, 'assets', 'logoTitle.png'));
-      // 5. 在可执行文件同级目录下的assets
-      potentialPaths.push(path.join(process.execPath, '..', 'assets', 'logoTitle.png'));
-      // 6. 直接在根目录
-      potentialPaths.push(path.join(process.resourcesPath, 'logoTitle.png'));
-      // 7. 可执行文件同级目录
-      potentialPaths.push(path.join(process.execPath, '..', 'logoTitle.png'));
-      // 8. 针对Windows安装路径的特殊处理
-      if (process.platform === 'win32') {
-        potentialPaths.push(path.join(process.resourcesPath, 'app', 'src', 'assets', 'logoTitle.png'));
-      }
-      
-      console.log('尝试的图标路径列表:', potentialPaths);
-      
-      // 查找存在的图标文件
-      for (const potentialPath of potentialPaths) {
-        if (fs.existsSync(potentialPath)) {
-          iconPath = potentialPath;
-          console.log('成功找到通知图标:', iconPath);
-          break;
-        } else {
-          console.log('图标路径不存在:', potentialPath);
-        }
-      }
-    } else {
-      // 开发环境 - 使用标准路径
-      iconPath = path.join(__dirname, '../src/assets/logoTitle.png');
-      console.log('开发环境图标路径:', iconPath);
-    }
-    
-    // 检查是否找到了有效的图标路径
-    if (iconPath && fs.existsSync(iconPath)) {
-      console.log('设置通知图标:', iconPath);
-      notificationOptions.icon = iconPath;
-    } else {
-      // 尝试使用内置的app图标作为回退
+      // 加载自定义通知HTML页面，考虑不同环境下的路径问题
+      let notificationUrl = '';
       try {
-        // 在Electron中，app.getAppPath()可以获取应用路径
-        const appIconPath = path.join(app.getAppPath(), 'src', 'assets', 'logoTitle.png');
-        if (fs.existsSync(appIconPath)) {
-          iconPath = appIconPath;
-          console.log('使用应用路径图标:', iconPath);
-          notificationOptions.icon = iconPath;
-        } else {
-          console.log('未找到任何有效图标文件，使用系统默认图标');
+      // 尝试多种可能的路径，以确保在开发和生产环境都能正常工作
+      const appPath = app.getAppPath();
+      
+      // 首先尝试直接在appPath下查找（打包后的根目录）
+      const possiblePaths = [
+        path.join(appPath, 'notification.html'),
+        path.join(appPath, 'src/assets/notification.html'),
+        path.join(appPath, 'assets/notification.html'),
+        path.join(__dirname, '../src/assets/notification.html')
+      ];
+      
+      // 尝试所有可能的路径直到找到文件
+      for (const possiblePath of possiblePaths) {
+        try {
+          if (fs.existsSync(possiblePath)) {
+            notificationUrl = possiblePath;
+            console.log('找到通知HTML文件:', notificationUrl);
+            break;
+          }
+        } catch (err) {
+          console.log('检查路径失败:', possiblePath, err.message);
         }
-      } catch (fallbackError) {
-        console.log('回退图标尝试失败:', fallbackError);
+      }
+      
+      // 如果找到了有效路径，加载文件
+      if (notificationUrl) {
+        notificationWindow.loadFile(notificationUrl);
+      } else {
+        // 如果所有路径都找不到，使用数据URL方式直接嵌入HTML内容
+        console.log('找不到通知HTML文件，使用数据URL方式');
+        
+        // 直接嵌入HTML内容，避免路径问题
+        const notificationHtml = `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>柯赛解密申请消息通知</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 16px 20px;
+            width: 360px;
+            height: 190px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            background-color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .notification-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+        .notification-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            margin-right: 16px;
+            background-color: #4a90e2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+        }
+        .notification-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .notification-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .notification-body {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        .status-info {
+            margin-bottom: 8px;
+        }
+        .notification-button {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .notification-button:hover { background-color: #357abd; }
+    </style>
+</head>
+<body>
+    <div class="notification-container">
+        <div class="notification-icon">🔒</div>
+        <div class="notification-content">
+            <div class="notification-title">柯赛解密申请消息通知</div>
+            <div class="notification-body">${body || '这是一条来自柯赛解密申请系统的桌面通知！'}</div>
+            <div class="status-info"><span>文件解密申请</span> <span>审核已通过</span></div>
+            <button class="notification-button">查看</button>
+        </div>
+    </div>
+    <script>
+        (function() {
+            const { ipcRenderer } = require('electron');
+            const filePath = '${filePath || ''}';
+            
+            document.querySelector('.notification-button').addEventListener('click', function() {
+                ipcRenderer.send('notification-action', { action: 'view', filePath: filePath });
+                window.close();
+            });
+            
+            document.querySelector('.notification-container').addEventListener('click', function(e) {
+                if (!e.target.closest('.notification-button')) {
+                    ipcRenderer.send('notification-action', { action: 'view', filePath: filePath });
+                    window.close();
+                }
+            });
+            
+            setTimeout(() => {
+                ipcRenderer.send('notification-loaded');
+            }, 100);
+        })();
+    </script>
+</body>
+</html>
+        `;
+        
+        notificationWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(notificationHtml));
+      }
+    } catch (error) {
+      console.error('加载通知失败:', error);
+      // 回退到系统通知
+      if (Notification.permission === 'granted') {
+        new Notification('柯赛解密申请消息通知', {
+          body: body || '这是一条来自柯赛解密申请系统的桌面通知！'
+        });
       }
     }
-  } catch (error) {
-    console.error('设置通知图标时出错:', error);
-    // 出错时不设置图标，使用系统默认图标
-  }
-  console.log(process.platform,'平台')
-  // 根据平台添加按钮支持
-  if (process.platform === 'win32' || process.platform === 'win64' || process.platform === 'darwin') {
-    notificationOptions.actions = [
-      { type: 'button', text: '查看' }
-    ];
-  }
-  
-  // 为Windows添加额外设置
-  if (process.platform === 'win32') {
-    notificationOptions.timeoutType = 'never'; // 永不超时
-  }
-  
-  // 创建通知
-  const notification = new Notification(notificationOptions);
-  
-  // 打开文件路径的通用函数，支持文件不存在时打开父文件夹
-  function openFilePathWithFallback(pathToOpen) {
-    if (!pathToOpen) {
-      console.log('没有提供文件路径');
-      return false;
+    
+    // 监听通知页面加载完成事件
+    ipcMain.once('notification-loaded', () => {
+      console.log('通知页面加载完成');
+    });
+    
+    // 确保窗口显示在屏幕右下角
+    function positionNotification() {
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width, height } = primaryDisplay.workAreaSize;
+      
+      // 设置窗口位置到右下角，离底部有30px的距离
+      notificationWindow.setPosition(
+        width - 370, // 窗口宽度 + 10px边距
+        height - 220 // 窗口高度 + 30px边距
+      );
     }
     
-    try {
-      console.log('尝试打开文件路径:', pathToOpen);
+    // 窗口加载完成后设置内容
+    notificationWindow.webContents.on('did-finish-load', () => {
+      // 使用更安全的方式传递参数，避免模板字符串转义问题
+      const safeTitle = '柯赛解密申请消息通知';
+      const safeBody = body || '这是一条来自柯赛解密申请系统的桌面通知！';
+      const safeFilePath = filePath || '';
       
-      // 检查文件是否存在
-      const fs = require('fs');
-      const path = require('path');
+      // 使用JSON.stringify确保特殊字符被正确转义
+      notificationWindow.webContents.executeJavaScript(
+        `window.setNotificationContent(
+          ${JSON.stringify(safeTitle)},
+          ${JSON.stringify(safeBody)},
+          ${JSON.stringify(safeFilePath)}
+        );`
+      );
       
-      if (fs.existsSync(pathToOpen)) {
-        // 文件存在，使用shell打开文件夹并选中文件
-        shell.showItemInFolder(pathToOpen);
-        return true;
-      } else {
-        // 文件不存在，尝试提取父文件夹路径
-        console.log('文件不存在，尝试打开父文件夹');
-        const parentDir = path.dirname(pathToOpen);
+      // 显示窗口（如果隐藏的话）
+      if (!notificationWindow.isVisible()) {
+        notificationWindow.show();
+      }
+    });
+    
+    // 打开文件路径的通用函数，支持文件不存在时打开父文件夹
+    function openFilePathWithFallback(pathToOpen) {
+      if (!pathToOpen) {
+        console.log('没有提供文件路径');
+        return false;
+      }
+      
+      try {
+        console.log('尝试打开文件路径:', pathToOpen);
         
-        if (fs.existsSync(parentDir)) {
-          // 父文件夹存在，打开父文件夹
-          shell.openPath(parentDir);
-          console.log('已打开父文件夹:', parentDir);
+        // 检查文件是否存在
+        const fs = require('fs');
+        const path = require('path');
+        
+        if (fs.existsSync(pathToOpen)) {
+          // 文件存在，使用shell打开文件夹并选中文件
+          shell.showItemInFolder(pathToOpen);
           return true;
         } else {
-          // 父文件夹也不存在，输出错误日志
-          console.error('父文件夹也不存在:', parentDir);
+          // 文件不存在，尝试提取父文件夹路径
+          console.log('文件不存在，尝试打开父文件夹');
+          const parentDir = path.dirname(pathToOpen);
+          
+          if (fs.existsSync(parentDir)) {
+            // 父文件夹存在，打开父文件夹
+            shell.openPath(parentDir);
+            console.log('已打开父文件夹:', parentDir);
+            return true;
+          } else {
+            // 父文件夹也不存在，输出错误日志
+            console.error('父文件夹也不存在:', parentDir);
+            return false;
+          }
+        }
+      } catch (error) {
+        console.error('打开文件路径失败:', error);
+        
+        // 发生错误时，尝试提取并打开父文件夹
+        try {
+          const path = require('path');
+          const parentDir = path.dirname(pathToOpen);
+          shell.openPath(parentDir);
+          console.log('发生错误，尝试打开父文件夹:', parentDir);
+          return true;
+        } catch (nestedError) {
+          console.error('尝试打开父文件夹也失败:', nestedError);
           return false;
         }
       }
-    } catch (error) {
-      console.error('打开文件路径失败:', error);
-      
-      // 发生错误时，尝试提取并打开父文件夹
-      try {
-        const path = require('path');
-        const parentDir = path.dirname(pathToOpen);
-        shell.openPath(parentDir);
-        console.log('发生错误，尝试打开父文件夹:', parentDir);
-        return true;
-      } catch (nestedError) {
-        console.error('尝试打开父文件夹也失败:', nestedError);
-        return false;
+    }
+    
+    // 处理通知操作的IPC消息
+    const handleNotificationAction = (event, data) => {
+      if (data.action === 'view' && data.filePath) {
+        // 打开文件路径
+        openFilePathWithFallback(data.filePath);
+        
+        // 确保应用在前台可见
+        const windows = BrowserWindow.getAllWindows();
+        if (windows && windows.length > 0) {
+          // 过滤掉通知窗口，只处理主应用窗口
+          const mainWindows = windows.filter(win => {
+            // 可以通过窗口URL或其他属性来识别主窗口
+            return !win.getURL().includes('notification.html');
+          });
+          
+          if (mainWindows.length > 0) {
+            const mainWindow = mainWindows[0];
+            if (mainWindow.isMinimized()) {
+              mainWindow.restore();
+            }
+            mainWindow.show();
+            mainWindow.focus();
+          } else {
+            // 如果没有主窗口打开，则创建一个新窗口
+            createWindow();
+          }
+        } else {
+          // 如果没有窗口打开，则创建一个新窗口
+          createWindow();
+        }
       }
+    };
+    
+    // 监听通知操作
+    ipcMain.on('notification-action', handleNotificationAction);
+    
+    // 通知窗口关闭时清理监听器
+    notificationWindow.on('closed', () => {
+      ipcMain.removeListener('notification-action', handleNotificationAction);
+    });
+    
+    // 设置窗口位置
+    positionNotification();
+    
+    // 添加屏幕变化监听器，在屏幕尺寸变化时重新定位
+    const { screen } = require('electron');
+    const screenListener = screen.on('display-metrics-changed', () => {
+      positionNotification();
+    });
+    
+    // 窗口关闭时清理屏幕监听器
+    notificationWindow.on('closed', () => {
+      screen.removeListener('display-metrics-changed', screenListener);
+    });
+    
+    // 返回通知窗口引用，以便外部可以控制它
+    return notificationWindow;
+  } catch (error) {
+    console.error('创建自定义通知时出错:', error);
+    
+    // 回退到系统通知
+    try {
+      const fallbackNotification = new Notification({
+        title: '柯赛解密申请消息通知',
+        body: body || '这是一条来自柯赛解密申请系统的桌面通知！',
+        requireInteraction: true
+      });
+      
+      fallbackNotification.on('click', () => {
+        if (filePath) {
+          // 打开文件路径的函数
+          const fs = require('fs');
+          const path = require('path');
+          const shell = require('electron').shell;
+          
+          try {
+            if (fs.existsSync(filePath)) {
+              shell.showItemInFolder(filePath);
+            } else {
+              const parentDir = path.dirname(filePath);
+              if (fs.existsSync(parentDir)) {
+                shell.openPath(parentDir);
+              }
+            }
+          } catch (e) {
+            console.error('打开文件路径失败:', e);
+          }
+        }
+      });
+      
+      fallbackNotification.show();
+    } catch (fallbackError) {
+      console.error('回退到系统通知也失败:', fallbackError);
     }
   }
-  
-  // 通知点击事件
-  notification.on('click', () => {
-    console.log('用户点击了通知');
-    
-    // 使用通用函数处理文件路径
-    if (filePath) {
-      openFilePathWithFallback(filePath);
-    }
-    
-    // // 点击后聚焦应用窗口
-    // const windows = BrowserWindow.getAllWindows();
-    // if (windows && windows.length > 0) {
-    //   const mainWindow = windows[0];
-    //   if (mainWindow.isMinimized()) {
-    //     mainWindow.restore();
-    //   }
-    //   mainWindow.focus();
-    // } else {
-    //   // 如果没有窗口打开，则创建一个新窗口
-    //   createWindow();
-    // }
-  });
-  
-  // 通知按钮点击事件（用于Windows）
-  notification.on('action', (event, index) => {
-    console.log('用户点击了通知按钮，索引:', index);
-    
-    // 点击"查看"按钮时使用通用函数处理
-    if (index === 0 && filePath) {
-      openFilePathWithFallback(filePath);
-    }
-  });
-  
-  // 通知关闭事件
-  notification.on('close', () => {
-    console.log('通知被关闭');
-  });
-  
-  // 通知显示事件
-  notification.on('show', () => {
-    console.log('通知已显示');
-  });
-  
-  // 触发通知显示
-  notification.show();
 }
 
 // IPC通信设置 - 监听来自渲染进程的通知请求
