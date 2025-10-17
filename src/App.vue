@@ -48,7 +48,7 @@
             type="primary">提交解密申请</el-button></div>
 
         <!-- <el-button class="mt20" @click="tihuan" type="primary">测试审批通过替换文件</el-button> -->
-        <el-button class="mt20" @click="showPersistentNotification" type="primary">电脑右下角弹窗消息</el-button>
+        <el-button class="mt20" @click="xiaoxits" type="primary">电脑右下角弹窗消息</el-button>
         <!-- 文件下载工具 -->
         <!-- <div class="file-download-section">
           <h2>文件下载工具</h2>
@@ -462,7 +462,7 @@ export default {
         path: zobj.path,
       }
       this.wjlist.push(tobj)
-      console.log(this.wjlist, 'sdd', tobj)
+      console.log(file, 'sdd')
     },
     // 删除文件
     deleteFile() {
@@ -621,9 +621,15 @@ export default {
         this.downloadMessage = ''
       }, 3000)
     },
-    
+    xiaoxits(){
+      var list = JSON.parse(localStorage.getItem('jmlist'));
+      var sj = list[0].sj;
+      var xx = `您与${sj}发起的解密审批已通过！`
+      this.showPersistentNotification(xx)
+      console.log(xx,'ss')
+    },
     // 显示桌面通知（只有用户点击才会消失）
-    showPersistentNotification() {
+    showPersistentNotification(body = '这是一条来自柯赛解密申请系统的桌面通知！') {
       try {
         // 检查是否在Electron环境中
         if (window && window.process && window.process.type) {
@@ -633,8 +639,8 @@ export default {
             // 使用electron的ipcRenderer向主进程发送消息
             const { ipcRenderer } = require('electron');
             
-            // 发送通知请求到主进程
-            ipcRenderer.send('show-persistent-notification');
+            // 发送通知请求到主进程，带上body参数
+            ipcRenderer.send('show-persistent-notification', { body });
             
             // 监听主进程的回复
             ipcRenderer.once('notification-shown', (event, arg) => {
@@ -646,11 +652,11 @@ export default {
           } catch (e) {
             console.error('IPC通信失败:', e);
             // 如果IPC失败，尝试备选方案
-            this.fallbackNotificationMethod();
+            this.fallbackNotificationMethod(body);
           }
         } else {
           // 非Electron环境下的备选方案
-          this.fallbackNotificationMethod();
+          this.fallbackNotificationMethod(body);
         }
       } catch (error) {
         console.error('显示通知失败:', error);
@@ -659,12 +665,12 @@ export default {
     },
     
     // 备选通知方法（非Electron环境或IPC失败时使用）
-    fallbackNotificationMethod() {
+    fallbackNotificationMethod(body = '这是一条来自柯赛解密申请系统的桌面通知！') {
       if ('Notification' in window) {
         Notification.requestPermission().then(permission => {
           if (permission === 'granted') {
             const notification = new Notification('系统通知2', {
-              body: '这是一条来自柯赛解密申请系统的桌面通知！',
+              body: body,
               icon: 'https://cosunerp.signcc.com/production/20251016/e515897959174c249a68ed17a4b5597a.png',
               requireInteraction: true // 请求用户交互，不会自动关闭
             });

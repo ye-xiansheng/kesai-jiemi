@@ -87,13 +87,13 @@ app.on("ready", async () => {
 });
 
 // 持久化通知函数 - 确保通知不会自动关闭
-function showPersistentNotification() {
+function showPersistentNotification(body) {
   console.log('显示持久化通知');
   
   // 创建通知配置
   const notificationOptions = {
     title: '系统通知',
-    body: '这是一条来自柯赛解密申请系统的桌面通知！',
+    body: body || '这是一条来自柯赛解密申请系统的桌面通知！',
     icon: path.join(__dirname, '../src/assets/logoTitle.png'),
     requireInteraction: true, // 关键设置：要求用户交互才能关闭
     urgency: 'critical' // 设置为最高优先级
@@ -140,9 +140,11 @@ function showPersistentNotification() {
 }
 
 // IPC通信设置 - 监听来自渲染进程的通知请求
-ipcMain.on('show-persistent-notification', (event) => {
-  console.log('收到渲染进程的通知请求');
-  showPersistentNotification();
+ipcMain.on('show-persistent-notification', (event, data) => {
+  console.log('收到渲染进程的通知请求', data);
+  // 提取body参数，如果没有则使用默认值
+  const body = data && data.body ? data.body : undefined;
+  showPersistentNotification(body);
   // 回复渲染进程通知已发送
   event.reply('notification-shown', { success: true });
 });
