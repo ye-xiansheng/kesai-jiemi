@@ -354,53 +354,85 @@ function showPersistentNotification(body, filePath) {
     title: '柯赛解密申请消息通知',
     body: body || '这是一条来自柯赛解密申请系统的桌面通知！',
     requireInteraction: true, // 关键设置：要求用户交互才能关闭
-    urgency: 'critical' // 设置为最高优先级
+    urgency: 'critical', // 设置为最高优先级
+    closeButtonText: '查看',
   };
   
   // 处理图标路径 - 确保在开发和打包环境都能正常工作
   try {
     // 由于在vue.config.js中设置了asar: false，我们需要调整路径处理
-    let iconPath;
+    let iconPath = null;
+    const fs = require('fs');
+    
+    // 收集所有可能的图标路径
+    const potentialPaths = [];
     
     if (app.isPackaged) {
-      // 打包后的应用 - 尝试多种可能的路径
-      const potentialPaths = [
-        // 直接在resources目录下
-        path.join(process.resourcesPath, 'src', 'assets', 'logoTitle.png'),
-        // 在应用根目录附近
-        path.join(process.execPath, '..', 'src', 'assets', 'logoTitle.png'),
-        // 备选路径
-        path.join(process.cwd(), 'src', 'assets', 'logoTitle.png')
-      ];
+      // 打包环境 - 添加更多可能的路径
+      // 1. 直接在resources目录下
+      potentialPaths.push(path.join(process.resourcesPath, 'src', 'assets', 'logoTitle.png'));
+      // 2. 在应用可执行文件所在目录
+      potentialPaths.push(path.join(process.execPath, '..', 'src', 'assets', 'logoTitle.png'));
+      // 3. 应用当前工作目录
+      potentialPaths.push(path.join(process.cwd(), 'src', 'assets', 'logoTitle.png'));
+      // 4. 不使用src子目录，直接在resources/assets下
+      potentialPaths.push(path.join(process.resourcesPath, 'assets', 'logoTitle.png'));
+      // 5. 在可执行文件同级目录下的assets
+      potentialPaths.push(path.join(process.execPath, '..', 'assets', 'logoTitle.png'));
+      // 6. 直接在根目录
+      potentialPaths.push(path.join(process.resourcesPath, 'logoTitle.png'));
+      // 7. 可执行文件同级目录
+      potentialPaths.push(path.join(process.execPath, '..', 'logoTitle.png'));
+      // 8. 针对Windows安装路径的特殊处理
+      if (process.platform === 'win32') {
+        potentialPaths.push(path.join(process.resourcesPath, 'app', 'src', 'assets', 'logoTitle.png'));
+      }
+      
+      console.log('尝试的图标路径列表:', potentialPaths);
       
       // 查找存在的图标文件
-      const fs = require('fs');
       for (const potentialPath of potentialPaths) {
         if (fs.existsSync(potentialPath)) {
           iconPath = potentialPath;
+          console.log('成功找到通知图标:', iconPath);
           break;
+        } else {
+          console.log('图标路径不存在:', potentialPath);
         }
       }
     } else {
-      // 开发环境
+      // 开发环境 - 使用标准路径
       iconPath = path.join(__dirname, '../src/assets/logoTitle.png');
+      console.log('开发环境图标路径:', iconPath);
     }
     
-    // 如果找到了有效的图标路径，则设置
-    const fs = require('fs');
+    // 检查是否找到了有效的图标路径
     if (iconPath && fs.existsSync(iconPath)) {
+      console.log('设置通知图标:', iconPath);
       notificationOptions.icon = iconPath;
     } else {
-      console.log('未找到图标文件，使用系统默认图标');
-      // 不设置图标，使用系统默认图标
+      // 尝试使用内置的app图标作为回退
+      try {
+        // 在Electron中，app.getAppPath()可以获取应用路径
+        const appIconPath = path.join(app.getAppPath(), 'src', 'assets', 'logoTitle.png');
+        if (fs.existsSync(appIconPath)) {
+          iconPath = appIconPath;
+          console.log('使用应用路径图标:', iconPath);
+          notificationOptions.icon = iconPath;
+        } else {
+          console.log('未找到任何有效图标文件，使用系统默认图标');
+        }
+      } catch (fallbackError) {
+        console.log('回退图标尝试失败:', fallbackError);
+      }
     }
   } catch (error) {
     console.error('设置通知图标时出错:', error);
     // 出错时不设置图标，使用系统默认图标
   }
-  
+  console.log(process.platform,'平台')
   // 根据平台添加按钮支持
-  if (process.platform === 'win32' || process.platform === 'darwin') {
+  if (process.platform === 'win32' || process.platform === 'win64' || process.platform === 'darwin') {
     notificationOptions.actions = [
       { type: 'button', text: '查看' }
     ];

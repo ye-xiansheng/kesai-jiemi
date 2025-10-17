@@ -661,7 +661,7 @@ export default {
             
             // 监听主进程的回复
             ipcRenderer.once('notification-shown', (event, arg) => {
-              console.log('通知请求已处理:', arg);
+              console.log(event, '通知请求已处理:', arg);
             });
             
             // 提示用户通知已请求
