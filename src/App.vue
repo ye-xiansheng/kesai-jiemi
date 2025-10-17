@@ -158,7 +158,7 @@ export default {
    this.cstime = setInterval(()=>{
       this.csnum++
       this.xiaoxits()
-      if(this.csnum>5){
+      if(this.csnum>2){
         clearInterval(this.cstime)
       }
     },10000)
@@ -633,6 +633,7 @@ export default {
       var list = JSON.parse(localStorage.getItem('jmlist'));
       var sj = list[0].sj;
       var xx = `您与${sj}发起的解密审批已通过！`
+      
       // 如果有文件路径，可以传递给通知
       // const filePaths = this.wjlist.map(item => item.path);
       // if (filePaths.length > 0) {
@@ -641,7 +642,7 @@ export default {
       //   console.log('带文件路径的通知已发送:', { message: xx, filePath: filePaths[0] })
       // } else {
         this.showPersistentNotification(xx, list[0].path)
-      //   console.log(xx, 'ss')
+        // console.log(xx, 'ss', list[0].path)
       // }
     },
     // 显示桌面通知（只有用户点击才会消失）

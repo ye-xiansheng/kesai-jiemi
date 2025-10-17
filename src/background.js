@@ -208,19 +208,64 @@ function showPersistentNotification(body, filePath) {
   // 创建通知
   const notification = new Notification(notificationOptions);
   
+  // 打开文件路径的通用函数，支持文件不存在时打开父文件夹
+  function openFilePathWithFallback(pathToOpen) {
+    if (!pathToOpen) {
+      console.log('没有提供文件路径');
+      return false;
+    }
+    
+    try {
+      console.log('尝试打开文件路径:', pathToOpen);
+      
+      // 检查文件是否存在
+      const fs = require('fs');
+      const path = require('path');
+      
+      if (fs.existsSync(pathToOpen)) {
+        // 文件存在，使用shell打开文件夹并选中文件
+        shell.showItemInFolder(pathToOpen);
+        return true;
+      } else {
+        // 文件不存在，尝试提取父文件夹路径
+        console.log('文件不存在，尝试打开父文件夹');
+        const parentDir = path.dirname(pathToOpen);
+        
+        if (fs.existsSync(parentDir)) {
+          // 父文件夹存在，打开父文件夹
+          shell.openPath(parentDir);
+          console.log('已打开父文件夹:', parentDir);
+          return true;
+        } else {
+          // 父文件夹也不存在，输出错误日志
+          console.error('父文件夹也不存在:', parentDir);
+          return false;
+        }
+      }
+    } catch (error) {
+      console.error('打开文件路径失败:', error);
+      
+      // 发生错误时，尝试提取并打开父文件夹
+      try {
+        const path = require('path');
+        const parentDir = path.dirname(pathToOpen);
+        shell.openPath(parentDir);
+        console.log('发生错误，尝试打开父文件夹:', parentDir);
+        return true;
+      } catch (nestedError) {
+        console.error('尝试打开父文件夹也失败:', nestedError);
+        return false;
+      }
+    }
+  }
+  
   // 通知点击事件
   notification.on('click', () => {
     console.log('用户点击了通知');
     
-    // 如果有文件路径，则打开文件夹
+    // 使用通用函数处理文件路径
     if (filePath) {
-      try {
-        console.log('尝试打开文件路径:', filePath);
-        // 使用shell打开文件夹并选中文件
-        shell.showItemInFolder(filePath);
-      } catch (error) {
-        console.error('打开文件路径失败:', error);
-      }
+      openFilePathWithFallback(filePath);
     }
     
     // // 点击后聚焦应用窗口
@@ -241,13 +286,9 @@ function showPersistentNotification(body, filePath) {
   notification.on('action', (event, index) => {
     console.log('用户点击了通知按钮，索引:', index);
     
-    if (index === 0 && filePath) { // 第一个按钮是"查看"
-      try {
-        console.log('通过按钮打开文件路径:', filePath);
-        shell.showItemInFolder(filePath);
-      } catch (error) {
-        console.error('打开文件路径失败:', error);
-      }
+    // 点击"查看"按钮时使用通用函数处理
+    if (index === 0 && filePath) {
+      openFilePathWithFallback(filePath);
     }
   });
   
