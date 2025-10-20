@@ -90,7 +90,6 @@
           <el-table-column prop="sj" label="申请时间"></el-table-column>
         </el-table>
       </div>
-      <el-button type="primary">检查更新</el-button>
     </div>
     <div v-else class="dzong">
       <!-- <div class="lbg"></div> -->
