@@ -82,6 +82,12 @@
           </div>
         </div> -->
         
+        <!-- 版本信息 -->
+      <div style="margin-bottom: 20px; padding: 15px; background: #f0f9eb; border: 1px solid #e1f3d8; border-radius: 4px;">
+        <p style="margin: 0; font-size: 14px;">当前应用版本：{{ appVersion }}</p>
+        <el-button type="primary" @click="fetchAppVersion" style="margin-top: 10px;">获取版本号</el-button>
+      </div>
+        
         <!-- 版本更新模块 -->
       <div class="version-update-section">
         <h2>版本更新管理</h2>
@@ -161,12 +167,14 @@
 </template>
 
 <script>
+import packageJson from '../package.json'
 
 export default {
   name: 'App',
   data() {
     return {
       tableData: [],
+      appVersion: '',
       radio1: '解密申请',
       filePath: '',
       message: '',
@@ -218,6 +226,7 @@ export default {
   mounted() {
     // 初始化用户信息
     this.userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    this.fetchAppVersion();
     this.xzobj = {
       key: 1760431459271,
       url: 'https://cosunerp.signcc.com/production/20251014/853dd2b09c2c41ec9c09fd9971680b09.pdf'
@@ -354,6 +363,31 @@ export default {
     saveCurrentVersion() {
       localStorage.setItem('appVersion', this.currentVersion);
       this.$message.success('当前版本号已保存');
+    },
+    
+    async fetchAppVersion() {
+      try {
+        console.log('开始获取版本号...');
+        
+        // 直接从导入的package.json获取版本号
+        const version = packageJson.version;
+        console.log('直接从package.json获取版本号:', version);
+        
+        if (version) {
+          this.appVersion = version;
+          console.log('成功设置应用版本号:', this.appVersion);
+          this.$message.success(`获取版本号成功: ${this.appVersion}`);
+        } else {
+          this.appVersion = '0.1.0';
+          console.error('Error: 版本号为空');
+          this.$message.error('获取版本号失败：版本号为空');
+        }
+      } catch (error) {
+        console.error('获取应用版本号时发生异常:', error);
+        // 使用默认版本号作为后备
+        this.appVersion = '0.1.0';
+        this.$message.error(`获取版本号失败: ${error.message || '未知错误'}`);
+      }
     },
     // 初始化WebSocket连接
     initWebSocket() {

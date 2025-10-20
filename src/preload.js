@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld(
     notificationLoaded: () => {
       ipcRenderer.send('notification-loaded');
     },
+    // 添加获取版本号的方法
+    getAppVersion: () => ipcRenderer.invoke('get-app-version'),
     // 其他可能需要的API可以在这里添加
     onNotificationShown: (callback) => ipcRenderer.on('notification-shown', callback)
   }
@@ -34,11 +36,28 @@ window.electron = {
       const validChannels = ['notification-shown'];
       if (validChannels.includes(channel)) {
         // 避免内存泄漏，使用一个引用保留回调
-        const subscription = (_event, ...args) => func(...args);
+        const subscription = (...args) => func(...args);
         ipcRenderer.on(channel, subscription);
-        
+
         // 返回一个清理函数
         return () => ipcRenderer.removeListener(channel, subscription);
+      }
+    },
+    invoke: async (channel, ...args) => {
+      // 限制只允许调用特定的消息通道
+      const validChannels = ['get-app-version'];
+      if (validChannels.includes(channel)) {
+        try {
+          console.log(`Preload: 处理invoke请求: ${channel}`);
+          const result = await ipcRenderer.invoke(channel, ...args);
+          console.log(`Preload: invoke结果: ${JSON.stringify(result)}`);
+          return result;
+        } catch (error) {
+          console.error(`Preload: invoke错误: ${error}`);
+          throw error;
+        }
+      } else {
+        throw new Error(`不允许访问的频道: ${channel}`);
       }
     }
   }

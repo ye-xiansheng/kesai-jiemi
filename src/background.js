@@ -14,11 +14,12 @@ import fs from "fs";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS3_DEVTOOLS } from "electron-devtools-installer";
 import path from "path";
+import { version } from '../package.json';
 const isDevelopment = process.env.NODE_ENV !== "production";
 
 // 全局变量
 global.tray = null;
-
+global.appVersion = version;
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { secure: true, standard: true } },
@@ -817,9 +818,15 @@ ipcMain.on("show-persistent-notification", (event, data) => {
   showPersistentNotification(body, filePath, auditStatus);
   // 回复渲染进程通知已发送
   event.reply("notification-shown", { success: true });
-});
+  });
 
-// 处理版本更新请求
+  // 处理获取应用版本号请求
+  ipcMain.handle("get-app-version", () => {
+    console.log("处理版本号请求，返回版本：", version);
+    return { version: version };
+  });
+
+  // 处理版本更新请求
 ipcMain.on("start-update", async (event, data) => {
   console.log("收到版本更新请求", data);
   const { version, url } = data;
