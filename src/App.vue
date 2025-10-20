@@ -9,7 +9,7 @@
         <span v-if="reconnectAttempts > 0">(重连中: {{ reconnectAttempts }}/{{ maxReconnectAttempts }})</span>
       </span>
     </div>
-    
+
     <div v-if="userInfo">
       <div class="d-fb">
         <div>
@@ -48,7 +48,7 @@
             type="primary">提交解密申请</el-button></div>
 
         <!-- <el-button class="mt20" @click="tihuan" type="primary">测试审批通过替换文件</el-button> -->
-         <el-input placeholder="请输入审核状态" v-model="ztvalue"></el-input>
+        <el-input placeholder="请输入审核状态" v-model="ztvalue"></el-input>
         <el-button class="mt20" @click="xiaoxits" type="primary">电脑右下角弹窗消息</el-button>
         <!-- 文件下载工具 -->
         <!-- <div class="file-download-section">
@@ -133,6 +133,7 @@ export default {
       jmlist: null,
       jmyy: '',
       xzobj: null,
+      gxurl: 'https://cosunerp.signcc.com/production/20251020/e1707cd3db6741e39cf10ddaae9921b3.exe',
       baseUrl: "https://cosunerp.signcc.com/cosunErp/",
       // WebSocket相关状态
       ws: null,
@@ -157,17 +158,17 @@ export default {
       url: 'https://cosunerp.signcc.com/production/20251014/853dd2b09c2c41ec9c09fd9971680b09.pdf'
     }
     console.log(this.xzobj, '初始化')
-  //  this.cstime = setInterval(()=>{
-  //     this.csnum++
-  //     this.xiaoxits()
-  //     if(this.csnum>2){
-  //       clearInterval(this.cstime)
-  //     }
-  //   },10000)
+    //  this.cstime = setInterval(()=>{
+    //     this.csnum++
+    //     this.xiaoxits()
+    //     if(this.csnum>2){
+    //       clearInterval(this.cstime)
+    //     }
+    //   },10000)
     // 初始化WebSocket连接
     // this.initWebSocket();
   },
-  
+
   // 组件卸载前清理WebSocket连接
   beforeUnmount() {
     // this.closeWebSocket();
@@ -183,45 +184,45 @@ export default {
 
       try {
         this.ws = new WebSocket(this.wsUrl);
-        
+
         // 连接成功
         this.ws.onopen = this.onWebSocketOpen;
-        
+
         // 接收消息
         this.ws.onmessage = this.onWebSocketMessage;
-        
+
         // 连接关闭
         this.ws.onclose = this.onWebSocketClose;
-        
+
         // 连接错误
         this.ws.onerror = this.onWebSocketError;
-        
+
         console.log('正在尝试连接WebSocket服务器...');
       } catch (error) {
         console.error('WebSocket初始化失败:', error);
         this.reconnect();
       }
     },
-    
+
     // WebSocket连接成功
     onWebSocketOpen() {
       console.log('WebSocket连接成功');
       this.wsConnected = true;
       this.reconnectAttempts = 0;
-      
+
       // 启动心跳
       this.startHeartbeat();
-      
+
       // 可以在这里发送认证信息或其他初始化数据
       // this.sendWebSocketMessage({ type: 'auth', data: '认证信息' });
     },
-    
+
     // 接收WebSocket消息
     onWebSocketMessage(event) {
       try {
         const data = JSON.parse(event.data);
         console.log('接收到WebSocket消息:', data);
-        
+
         // 根据消息类型处理
         switch (data.type) {
           case 'pong':
@@ -242,26 +243,26 @@ export default {
         console.log('收到非JSON格式消息:', event.data);
       }
     },
-    
+
     // WebSocket连接关闭
     onWebSocketClose(event) {
       console.log('WebSocket连接关闭', event.code, event.reason);
       this.wsConnected = false;
-      
+
       // 停止心跳
       this.stopHeartbeat();
-      
+
       // 如果不是手动关闭，尝试重连
       if (event.code !== 1000) {
         this.reconnect();
       }
     },
-    
+
     // WebSocket连接错误
     onWebSocketError(error) {
       console.error('WebSocket连接错误:', error);
     },
-    
+
     // 发送WebSocket消息
     sendWebSocketMessage(message) {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -276,7 +277,7 @@ export default {
         console.warn('WebSocket未连接，无法发送消息');
       }
     },
-    
+
     // 启动心跳
     startHeartbeat() {
       this.stopHeartbeat();
@@ -286,7 +287,7 @@ export default {
         }
       }, this.heartbeatInterval);
     },
-    
+
     // 停止心跳
     stopHeartbeat() {
       if (this.heartbeatTimer) {
@@ -294,29 +295,29 @@ export default {
         this.heartbeatTimer = null;
       }
     },
-    
+
     // 重连机制
     reconnect() {
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         console.error(`已达到最大重连次数(${this.maxReconnectAttempts})，停止重连`);
         return;
       }
-      
+
       // 清除之前的重连定时器
       if (this.reconnectTimer) {
         clearTimeout(this.reconnectTimer);
       }
-      
+
       this.reconnectAttempts++;
       const delay = this.reconnectInterval * Math.min(2 * this.reconnectAttempts, 30); // 指数退避，但不超过30倍
-      
+
       console.log(`将在${delay}ms后进行第${this.reconnectAttempts}次重连...`);
-      
+
       this.reconnectTimer = setTimeout(() => {
         this.initWebSocket();
       }, delay);
     },
-    
+
     // 关闭WebSocket连接
     closeWebSocket() {
       this.stopHeartbeat();
@@ -324,29 +325,29 @@ export default {
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = null;
       }
-      
+
       if (this.ws) {
         this.ws.close(1000, '手动关闭');
         this.ws = null;
       }
-      
+
       this.wsConnected = false;
       console.log('WebSocket连接已手动关闭');
     },
-    
+
     // 处理通知消息
     handleNotification(data) {
       console.log('处理通知消息:', data);
       // 这里可以根据需要显示通知给用户
       // this.$message.info(data.content);
     },
-    
+
     // 处理其他消息
     handleOtherMessages(data) {
       console.log('处理其他消息:', data);
       // 这里可以根据具体业务需求处理其他类型的消息
     },
-    
+
     // 格式化日期时间
     formatDate(timestamp) {
       const date = new Date(timestamp);
@@ -636,11 +637,11 @@ export default {
       var sj = list[0].sj;
       var name = list.map(item => item.name);
       var xx = `您于${sj}发起的${name.toString()}`;
-      
+
       // 从列表中获取审核状态，如果没有则默认为'审核通过'
       // 假设列表项中有一个status字段表示审核状态
       // var auditStatus = list[0].status || '审核通过';
-      var auditStatus = this.ztvalue===''?'审核通过':this.ztvalue;
+      var auditStatus = this.ztvalue === '' ? '审核通过' : this.ztvalue;
       this.showPersistentNotification(xx, list[0].path, auditStatus);
     },
     // 显示桌面通知（只有用户点击才会消失）
@@ -649,19 +650,19 @@ export default {
         // 检查是否在Electron环境中
         if (window && window.process && window.process.type) {
           console.log('通过IPC请求主进程显示持久化通知', { body, filePath, auditStatus });
-          
+
           try {
             // 使用electron的ipcRenderer向主进程发送消息
             const { ipcRenderer } = require('electron');
-            
+
             // 发送通知请求到主进程，带上body、filePath和auditStatus参数
             ipcRenderer.send('show-persistent-notification', { body, filePath, auditStatus });
-            
+
             // 监听主进程的回复
             ipcRenderer.once('notification-shown', (event, arg) => {
               console.log(event, '通知请求已处理:', arg);
             });
-            
+
             // 提示用户通知已请求
             this.$message.success('通知请求已发送');
           } catch (e) {
@@ -678,7 +679,7 @@ export default {
         this.$message.error('显示通知失败，请检查权限设置');
       }
     },
-    
+
     // 备选通知方法（非Electron环境或IPC失败时使用）
     fallbackNotificationMethod(body = '这是一条来自柯赛解密申请系统的桌面通知！') {
       if ('Notification' in window) {
@@ -689,7 +690,7 @@ export default {
               icon: 'https://cosunerp.signcc.com/production/20251016/e515897959174c249a68ed17a4b5597a.png',
               requireInteraction: true // 请求用户交互，不会自动关闭
             });
-            
+
             notification.onclick = () => {
               console.log('用户点击了备选通知');
             };
@@ -766,9 +767,11 @@ body {
   0% {
     box-shadow: 0 0 0 0 rgba(64, 169, 77, 0.7);
   }
+
   70% {
     box-shadow: 0 0 0 10px rgba(64, 169, 77, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(64, 169, 77, 0);
   }
@@ -793,6 +796,7 @@ body {
 .un {
   font-weight: bold;
 }
+
 .dzong {
   width: 500px;
   position: fixed;
