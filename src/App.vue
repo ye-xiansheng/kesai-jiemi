@@ -126,7 +126,7 @@
           
           <div class="progress-text">{{ downloadProgress }}%</div>
           
-          <div v-if="downloadError" style="text-align: center; color: green; font-size: 16px;">
+          <div v-if="downloadError" style="text-align: center; color: #999; font-size: 12px;">
             {{ downloadError }}
           </div>
         </div>
@@ -1187,8 +1187,9 @@ body {
 
 .progress-text {
   text-align: center;
-  font-size: 12px;
-  color: #909399;
+  font-size: 16px;
+  font-weight: bold;
+  color: green;
   margin-bottom: 20px;
 }
 
