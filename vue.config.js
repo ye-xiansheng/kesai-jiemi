@@ -1,42 +1,6 @@
 const { defineConfig } = require('@vue/cli-service')
 module.exports = defineConfig({
   transpileDependencies: true,
-  configureWebpack: {
-    module: {
-      rules: [
-        {
-          test: /\.png$/,
-          use: [
-            {
-              loader: 'url-loader',
-              options: {
-                limit: 10000
-              }
-            },
-            {
-              loader: 'image-webpack-loader',
-              options: {
-                pngquant: {
-                  quality: [0.90, 0.95]
-                },
-                optipng: {
-                  optimizationLevel: 7
-                },
-                gifsicle: {
-                  interlaced: false
-                },
-                // 解决libpng的sRGB配置文件警告
-                png: {
-                  // 忽略iCCP错误
-                  disable: true
-                }
-              }
-            }
-          ]
-        }
-      ]
-    }
-  },
   pages: {
     index: {
       entry: 'src/main.js',

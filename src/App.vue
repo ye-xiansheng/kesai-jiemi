@@ -93,7 +93,7 @@
     </div>
     <div v-else class="dzong">
       <!-- <div class="lbg"></div> -->
-      <img src="./assets/bg.png" style="width: 250px;height: 250px;" alt="">
+      <img src="@/assets/bg.png" style="width: 250px;height: 250px;" alt="">
       <div style="flex: 1;">
         <div class="dtitle">柯赛标识</div>
         <div class="djs">解密申请</div>
@@ -793,14 +793,6 @@ body {
 .un {
   font-weight: bold;
 }
-
-.lbg {
-  width: 250px;
-  height: 250px;
-  background: url(./assets/bg.png) no-repeat;
-  background-size: 100%;
-}
-
 .dzong {
   width: 500px;
   position: fixed;
