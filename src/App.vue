@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+    <div class="container">
     <!-- WebSocket连接状态显示 -->
     <div class="ws-status" :class="{ 'connected': wsConnected, 'disconnected': !wsConnected }">
       <span v-if="wsConnected" class="status-dot connected"></span>
@@ -81,6 +81,56 @@
             {{ downloadMessage }}
           </div>
         </div> -->
+        
+        <!-- 版本更新模块 -->
+      <div class="version-update-section">
+        <h2>版本更新管理</h2>
+        
+        <div class="version-input-group">
+          <label>当前版本：</label>
+          <input type="text" v-model="currentVersion" placeholder="请输入当前版本号">
+          <button class="save-version-btn" @click="saveCurrentVersion">保存</button>
+        </div>
+        
+        <div class="version-input-group">
+          <label>新版本号：</label>
+          <input type="text" v-model="newVersion" placeholder="请输入新版本号（如：1.0.1）">
+        </div>
+        
+        <div class="version-input-group">
+          <label>下载链接：</label>
+          <input type="text" v-model="updateUrl" placeholder="请输入新版本安装包下载链接">
+        </div>
+        
+        <div class="update-buttons">
+          <button class="check-update-btn" @click="checkForUpdates" :disabled="isCheckingUpdate">
+            {{ isCheckingUpdate ? '检查中...' : '检查并更新' }}
+          </button>
+        </div>
+      </div>
+      
+      <!-- 下载进度对话框 -->
+      <div v-if="showDownloadProgress" class="progress-overlay">
+        <div class="download-progress-dialog">
+          <h3>正在下载更新</h3>
+          
+          <div v-if="downloadFileName" class="download-file-name">
+            {{ downloadFileName }}
+          </div>
+          
+          <div class="download-status">{{ downloadStatus }}</div>
+          
+          <!-- <div class="progress-bar-container">
+            <div class="progress-bar" :style="{ width: downloadProgress + '%' }"></div>
+          </div> -->
+          
+          <div class="progress-text">{{ downloadProgress }}%</div>
+          
+          <div v-if="downloadError" style="text-align: center; color: green; font-size: 16px;">
+            {{ downloadError }}
+          </div>
+        </div>
+      </div>
       </div>
       <div class="mt20" v-else>
         <el-table :data="tableData" :header-cell-style="{ background: '#F5F7FA' }" border>
@@ -91,7 +141,10 @@
         </el-table>
       </div>
     </div>
-    <div v-else class="dzong">
+      
+      
+      <div v-else class="dzong">
+      
       <!-- <div class="lbg"></div> -->
       <img src="@/assets/bg.png" style="width: 250px;height: 250px;" alt="">
       <div style="flex: 1;">
@@ -124,7 +177,7 @@ export default {
       saveFileName: '',
       downloadDirectory: 'E:\\exelectron-vue\\aaa',
       isDownloading: false,
-      downloadProgress: 0,
+      // downloadProgress: 0,
       downloadMessage: '',
       downloadMessageType: 'info',
       userInfo: undefined,
@@ -135,13 +188,25 @@ export default {
       xzobj: null,
       gxurl: 'https://cosunerp.signcc.com/production/20251020/e1707cd3db6741e39cf10ddaae9921b3.exe',
       baseUrl: "https://cosunerp.signcc.com/cosunErp/",
+      // 版本更新相关变量
+      currentVersion: localStorage.getItem('appVersion') || '1.0.0',
+      newVersion: '',
+      updateUrl: '',
+      isCheckingUpdate: false,
+      
+      // 下载进度相关
+      showDownloadProgress: false,
+      downloadProgress: 0,
+      downloadStatus: '',
+      downloadFileName: '',
+      downloadError: '',
       // WebSocket相关状态
       ws: null,
       wsUrl: 'ws://172.16.112.21:9095/cosunErp/websocke',
       wsConnected: false,
       reconnectInterval: 5000, // 重连间隔(ms)
       reconnectAttempts: 0,
-      maxReconnectAttempts: 10, // 最大重连次数
+      maxReconnectAttempts: 10, // 最大重连次数,
       heartbeatInterval: 30000, // 心跳间隔(ms)
       heartbeatTimer: null,
       reconnectTimer: null,
@@ -158,13 +223,13 @@ export default {
       url: 'https://cosunerp.signcc.com/production/20251014/853dd2b09c2c41ec9c09fd9971680b09.pdf'
     }
     console.log(this.xzobj, '初始化')
-    //  this.cstime = setInterval(()=>{
-    //     this.csnum++
-    //     this.xiaoxits()
-    //     if(this.csnum>2){
-    //       clearInterval(this.cstime)
-    //     }
-    //   },10000)
+    
+    // 从本地存储加载版本信息
+    const savedVersion = localStorage.getItem('appVersion');
+    if (savedVersion) {
+      this.currentVersion = savedVersion;
+    }
+    
     // 初始化WebSocket连接
     // this.initWebSocket();
   },
@@ -174,6 +239,122 @@ export default {
     // this.closeWebSocket();
   },
   methods: {
+    // 检查版本更新
+    checkForUpdates() {
+      if (!this.newVersion || !this.updateUrl) {
+        this.$message.error('请输入新版本号和下载链接');
+        return;
+      }
+      
+      this.isCheckingUpdate = true;
+      
+      // 比较版本号
+      if (this.isNewVersionAvailable(this.currentVersion, this.newVersion)) {
+        // 有新版本，显示更新提示
+        this.$confirm(`发现新版本 ${this.newVersion}，是否立即更新？`, '版本更新', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'info'
+        }).then(() => {
+          // 用户点击确定，开始更新
+          this.startUpdate();
+        }).catch(() => {
+          this.$message.info('已取消更新');
+        }).finally(() => {
+          this.isCheckingUpdate = false;
+        });
+      } else {
+        this.$message.info('当前已是最新版本');
+        this.isCheckingUpdate = false;
+      }
+    },
+    
+    // 比较版本号是否有更新
+    isNewVersionAvailable(current, newVer) {
+      const currentParts = current.split('.').map(Number);
+      const newParts = newVer.split('.').map(Number);
+      
+      for (let i = 0; i < Math.max(currentParts.length, newParts.length); i++) {
+        const currentNum = currentParts[i] || 0;
+        const newNum = newParts[i] || 0;
+        
+        if (newNum > currentNum) {
+          return true;
+        } else if (newNum < currentNum) {
+          return false;
+        }
+      }
+      
+      return false;
+    },
+    
+    // 开始更新
+    startUpdate() {
+      try {
+        // 在Electron环境中，通过IPC发送更新请求到主进程
+        if (window && window.process && window.process.type) {
+          const { ipcRenderer } = require('electron');
+          
+          // 重置下载进度状态
+          this.showDownloadProgress = true;
+          this.downloadProgress = 0;
+          this.downloadStatus = '准备下载...';
+          this.downloadFileName = '';
+          this.downloadError = '';
+          
+          // 监听下载进度
+          ipcRenderer.on('download-progress', (event, progress) => {
+            this.downloadProgress = progress.progress;
+            this.downloadStatus = progress.status;
+            this.downloadFileName = progress.fileName || '';
+            this.downloadError = progress.error ? progress.status : '';
+            
+            // 如果有错误，显示错误信息
+            if (progress.error) {
+              this.$message.error(`下载错误: ${progress.status}`);
+              this.showDownloadProgress = false;
+              // 移除监听器
+              ipcRenderer.removeAllListeners('download-progress');
+            }
+          });
+          
+          // 发送更新请求
+          ipcRenderer.send('start-update', {
+            version: this.newVersion,
+            url: this.updateUrl
+          });
+          
+          // 监听更新状态
+          ipcRenderer.once('update-status', (event, status) => {
+            // 移除下载进度监听器
+            ipcRenderer.removeAllListeners('download-progress');
+            
+            if (status.success) {
+              this.$message.success('更新包下载成功，正在安装...');
+              // 保存新版本号
+              localStorage.setItem('appVersion', this.newVersion);
+              // 隐藏下载进度对话框
+              this.showDownloadProgress = false;
+            } else {
+              this.$message.error(`更新失败: ${status.message || '未知错误'}`);
+              this.showDownloadProgress = false;
+            }
+          });
+        } else {
+          this.$message.error('此功能需要在Electron环境中运行');
+        }
+      } catch (error) {
+        console.error('启动更新失败:', error);
+        this.$message.error('启动更新失败');
+        this.showDownloadProgress = false;
+      }
+    },
+    
+    // 保存当前版本号
+    saveCurrentVersion() {
+      localStorage.setItem('appVersion', this.currentVersion);
+      this.$message.success('当前版本号已保存');
+    },
     // 初始化WebSocket连接
     initWebSocket() {
       // 检查环境是否支持WebSocket
@@ -865,6 +1046,162 @@ body {
   padding-bottom: 60px;
 }
 
+/* 版本更新模块样式 */
+.version-update-section {
+  margin: 20px 0;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.version-update-section h2 {
+  margin-bottom: 20px;
+  color: #303133;
+  font-size: 18px;
+}
+
+.version-input-group {
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+}
+
+.version-input-group label {
+  width: 100px;
+  color: #606266;
+  font-size: 14px;
+}
+
+.version-input-group input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.version-input-group input:focus {
+  outline: none;
+  border-color: #409eff;
+}
+
+.save-version-btn {
+  margin-left: 10px;
+  padding: 8px 16px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.save-version-btn:hover {
+  background-color: #66b1ff;
+}
+
+.update-buttons {
+  margin-top: 20px;
+}
+
+.check-update-btn {
+  padding: 10px 24px;
+  background-color: #67c23a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.check-update-btn:hover:not(:disabled) {
+  background-color: #85ce61;
+}
+
+.check-update-btn:disabled {
+  background-color: #c0c4cc;
+  cursor: not-allowed;
+}
+
+/* 下载进度对话框样式 */
+.download-progress-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  width: 400px;
+  max-width: 90%;
+}
+
+.download-progress-dialog h3 {
+  margin: 0 0 20px 0;
+  color: #303133;
+  font-size: 16px;
+  text-align: center;
+}
+
+.download-progress-info {
+  margin-bottom: 15px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.download-file-name {
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 10px;
+  word-break: break-all;
+}
+
+.download-status {
+  text-align: center;
+  margin-bottom: 15px;
+  color: #606266;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 10px;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #409eff;
+  border-radius: 5px;
+  transition: width 0.3s ease;
+  min-width: 1%; /* 确保进度条至少显示一点 */
+}
+
+.progress-text {
+  text-align: center;
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 20px;
+}
+
+.progress-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
 .tjbtn {
   position: fixed;
   bottom: 20px;
@@ -1055,5 +1392,79 @@ body {
 .progress-text {
   font-size: 14px;
   color: #333;
+}
+
+/* 版本更新模块样式 */
+.version-update-section {
+  margin-top: 40px;
+  padding: 30px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.version-update-section h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.version-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.version-input-group label {
+  min-width: 100px;
+  font-weight: 500;
+}
+
+.version-input-group input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.update-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.check-update-btn {
+  padding: 10px 24px;
+  background-color: #42b983;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.check-update-btn:hover:not(:disabled) {
+  background-color: #3aa575;
+}
+
+.check-update-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.save-version-btn {
+  padding: 10px 20px;
+  background-color: #95a5a6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.save-version-btn:hover {
+  background-color: #7f8c8d;
 }
 </style>

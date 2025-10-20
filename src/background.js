@@ -819,6 +819,262 @@ ipcMain.on("show-persistent-notification", (event, data) => {
   event.reply("notification-shown", { success: true });
 });
 
+// 处理版本更新请求
+ipcMain.on("start-update", async (event, data) => {
+  console.log("收到版本更新请求", data);
+  const { version, url } = data;
+  
+  try {
+    // 下载更新包，传入event以便发送进度
+    const updateFilePath = await downloadUpdatePackage(url, event);
+    
+    // 安装更新
+    await installUpdate(updateFilePath, event);
+    
+    // 通知渲染进程更新成功
+    event.reply("update-status", { success: true });
+    
+  } catch (error) {
+    console.error("版本更新失败:", error);
+    event.reply("update-status", { 
+      success: false, 
+      message: error.message || "未知错误"
+    });
+  }
+});
+
+// 下载更新包
+async function downloadUpdatePackage(updateUrl, event) {
+  return new Promise((resolve, reject) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const https = require('https');
+      const http = require('http');
+      
+      // 获取用户的临时目录作为下载位置
+      const tempDir = require('os').tmpdir();
+      const fileName = path.basename(updateUrl);
+      const savePath = path.join(tempDir, `update_${Date.now()}_${fileName}`);
+      
+      // 确保目录存在
+      if (!fs.existsSync(tempDir)) {
+        try {
+          fs.mkdirSync(tempDir, { recursive: true });
+        } catch (mkdirError) {
+          reject(new Error(`创建临时目录失败: ${mkdirError.message}`));
+          return;
+        }
+      }
+      
+      console.log(`开始下载更新包到: ${savePath}`);
+      
+      // 发送开始下载通知
+      if (event) {
+        event.reply('download-progress', {
+          progress: 0,
+          status: '开始下载',
+          fileName: fileName
+        });
+      }
+      
+      // 根据URL协议选择http或https模块
+      const protocol = updateUrl.startsWith('https') ? https : http;
+      
+      // 创建选项，添加超时设置
+      const options = {
+        timeout: 60000, // 60秒超时
+        headers: {
+          'User-Agent': 'CSelectron-Update-Client'
+        }
+      };
+      
+      // 预先声明file变量，扩大作用域
+      let file = null;
+      
+      // 发送请求下载文件
+      const request = protocol.get(updateUrl, options, (response) => {
+        // 检查HTTP状态码
+        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+          // 处理重定向
+          console.log(`检测到重定向到: ${response.headers.location}`);
+          if (event) {
+            event.reply('download-progress', {
+              progress: 0,
+              status: `重定向到新地址`,
+              fileName: fileName
+            });
+          }
+          // 关闭当前请求
+          request.abort();
+          // 使用新地址重新下载
+          return downloadUpdatePackage(response.headers.location, event)
+            .then(resolve)
+            .catch(reject);
+        }
+        
+        if (response.statusCode !== 200) {
+          const errorMsg = `下载失败，状态码: ${response.statusCode}`;
+          console.error(errorMsg);
+          if (event) {
+            event.reply('download-progress', {
+              progress: 0,
+              status: errorMsg,
+              fileName: fileName,
+              error: true
+            });
+          }
+          reject(new Error(errorMsg));
+          return;
+        }
+        
+        // 获取文件大小
+        const fileSize = parseInt(response.headers['content-length'], 10);
+        let downloadedSize = 0;
+        
+        // 创建文件写入流
+        file = fs.createWriteStream(savePath);
+        
+        // 监听文件写入错误
+        file.on('error', (err) => {
+          handleError(new Error(`文件写入失败: ${err.message}`));
+        });
+        
+        // 监听数据传输事件，计算进度
+        response.on('data', (chunk) => {
+          downloadedSize += chunk.length;
+          if (fileSize > 0) {
+            const progress = Math.floor((downloadedSize / fileSize) * 100);
+            if (event) {
+              event.reply('download-progress', {
+                progress: progress,
+                status: `下载中...`,
+                fileName: fileName,
+                downloaded: downloadedSize,
+                total: fileSize
+              });
+            }
+          }
+        });
+        
+        // 管道到文件流
+        response.pipe(file);
+        
+        // 文件下载完成
+        file.on('finish', () => {
+          file.close(() => {
+            console.log(`更新包下载完成: ${savePath}`);
+            if (event) {
+              event.reply('download-progress', {
+                progress: 100,
+                status: '下载完成',
+                fileName: fileName
+              });
+            }
+            resolve(savePath);
+          });
+        });
+        
+        // 响应超时
+        response.on('timeout', () => {
+          handleError(new Error('下载响应超时'));
+        });
+      });
+      
+      // 请求超时处理
+      request.setTimeout(60000, () => {
+        request.abort();
+        handleError(new Error('下载请求超时'));
+      });
+      
+      // 错误处理
+      request.on('error', (err) => {
+        handleError(new Error(`下载请求失败: ${err.message}`));
+      });
+      
+      // 统一错误处理函数
+      function handleError(error) {
+        try {
+          if (fs.existsSync(savePath)) {
+            fs.unlinkSync(savePath); // 删除不完整的文件
+          }
+        } catch (e) {
+          console.error('删除临时文件失败:', e);
+        }
+        
+        console.error('下载错误:', error.message);
+        if (event) {
+          event.reply('download-progress', {
+            progress: 0,
+            status: error.message,
+            fileName: fileName,
+            error: true
+          });
+        }
+        reject(error);
+      }
+      
+    } catch (error) {
+      const errorMsg = `下载更新包时出错: ${error.message}`;
+      console.error(errorMsg);
+      if (event) {
+        event.reply('download-progress', {
+          progress: 0,
+          status: errorMsg,
+          error: true
+        });
+      }
+      reject(new Error(errorMsg));
+    }
+  });
+}
+
+// 安装更新 - 直接打开下载的文件
+async function installUpdate(updateFilePath, event) {
+  return new Promise((resolve, reject) => {
+    try {
+      const { shell } = require('electron');
+      const fs = require('fs');
+      const path = require('path');
+      
+      // 检查文件是否存在
+      if (!fs.existsSync(updateFilePath)) {
+        const errorMsg = `更新文件不存在: ${updateFilePath}`;
+        console.error(errorMsg);
+        reject(new Error(errorMsg));
+        return;
+      }
+      
+      console.log(`找到更新文件: ${updateFilePath}`);
+      
+      // 直接打开文件（这会触发系统默认行为，通常是显示文件或打开安装程序）
+      shell.openPath(updateFilePath).then((error) => {
+        if (error) {
+          console.error('打开更新文件失败:', error);
+          reject(new Error(`打开更新文件失败: ${error}`));
+        } else {
+          console.log('已成功打开更新文件，请手动完成安装');
+          
+          // 通知渲染进程
+          if (event) {
+            event.reply('update-status', {
+              success: true,
+              message: '已打开更新文件，请手动完成安装',
+              filePath: updateFilePath
+            });
+          }
+          
+          resolve(updateFilePath);
+        }
+      });
+      
+    } catch (error) {
+      console.error('安装更新时出错:', error);
+      reject(new Error(`安装更新时出错: ${error.message}`));
+    }
+  });
+}
+
 // 监听应用退出事件
 app.on("before-quit", () => {
   global.isQuitting = true;
