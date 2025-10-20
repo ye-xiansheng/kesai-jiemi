@@ -755,13 +755,14 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
 
     // 添加屏幕变化监听器，在屏幕尺寸变化时重新定位
     const { screen } = require("electron");
-    const screenListener = screen.on("display-metrics-changed", () => {
+    const handleDisplayMetricsChanged = () => {
       positionNotification();
-    });
+    };
+    screen.on("display-metrics-changed", handleDisplayMetricsChanged);
 
     // 窗口关闭时清理屏幕监听器
     notificationWindow.on("closed", () => {
-      screen.removeListener("display-metrics-changed", screenListener);
+      screen.removeListener("display-metrics-changed", handleDisplayMetricsChanged);
     });
 
     // 返回通知窗口引用，以便外部可以控制它
