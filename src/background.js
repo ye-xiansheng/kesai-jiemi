@@ -69,9 +69,9 @@ async function createWindow() {
       if (app.isPackaged) {
         // 打包环境 - 尝试多种可能的路径
         const potentialPaths = [
-          path.join(process.resourcesPath, "src", "assets", "logoTitle.png"),
-          path.join(process.execPath, "..", "src", "assets", "logoTitle.png"),
-          path.join(process.cwd(), "src", "assets", "logoTitle.png"),
+          path.join(process.resourcesPath, "src", "assets", "zhuomian.png.png"),
+          path.join(process.execPath, "..", "src", "assets", "zhuomian.png.png"),
+          path.join(process.cwd(), "src", "assets", "zhuomian.png.png"),
         ];
 
         const fs = require("fs");
@@ -84,7 +84,7 @@ async function createWindow() {
         }
       } else {
         // 开发环境
-        iconPath = path.join(__dirname, "../src/assets/logoTitle.png");
+        iconPath = path.join(__dirname, "../src/assets/zhuomian.png.png");
       }
     } catch (iconError) {
       console.error("查找窗口图标路径时出错:", iconError);
@@ -244,9 +244,9 @@ app.on("ready", async () => {
         if (app.isPackaged) {
           // 打包环境 - 尝试多种可能的路径
           const potentialPaths = [
-            path.join(process.resourcesPath, "src", "assets", "logoTitle.png"),
-            path.join(process.execPath, "..", "src", "assets", "logoTitle.png"),
-            path.join(process.cwd(), "src", "assets", "logoTitle.png"),
+            path.join(process.resourcesPath, "src", "assets", "zhuomian.png.png"),
+            path.join(process.execPath, "..", "src", "assets", "zhuomian.png.png"),
+            path.join(process.cwd(), "src", "assets", "zhuomian.png.png"),
           ];
 
           const fs = require("fs");
@@ -259,7 +259,7 @@ app.on("ready", async () => {
           }
         } else {
           // 开发环境
-          iconPath = path.join(__dirname, "../src/assets/logoTitle.png");
+          iconPath = path.join(__dirname, "../src/assets/zhuomian.png.png");
         }
       } catch (iconError) {
         console.error("查找图标路径时出错:", iconError);
