@@ -890,7 +890,7 @@ async function downloadUpdatePackage(updateUrl, event) {
       
       // 创建选项，添加超时设置
       const options = {
-        timeout: 60000, // 60秒超时
+        timeout: 360000, // 60秒超时
         headers: {
           'User-Agent': 'CSelectron-Update-Client'
         }
@@ -978,6 +978,14 @@ async function downloadUpdatePackage(updateUrl, event) {
                 fileName: fileName
               });
             }
+            
+            // 关闭所有应用窗口
+            console.log('准备关闭所有应用窗口...');
+            BrowserWindow.getAllWindows().forEach((win) => {
+              console.log('关闭窗口');
+              win.close();
+            });
+            
             resolve(savePath);
           });
         });

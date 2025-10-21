@@ -1,5 +1,5 @@
 <template>
-    <div class="container">
+  <div class="container">
     <!-- WebSocket连接状态显示 -->
     <div class="ws-status" :class="{ 'connected': wsConnected, 'disconnected': !wsConnected }">
       <span v-if="wsConnected" class="status-dot connected"></span>
@@ -81,62 +81,46 @@
             {{ downloadMessage }}
           </div>
         </div> -->
-        
+
         <!-- 版本信息 -->
-      <div style="margin-bottom: 20px; padding: 15px; background: #f0f9eb; border: 1px solid #e1f3d8; border-radius: 4px;">
-        <p style="margin: 0; font-size: 14px;">当前应用版本：{{ appVersion }}</p>
-        <el-button type="primary" @click="fetchAppVersion" style="margin-top: 10px;">获取版本号</el-button>
-      </div>
-        
+        <div
+          style="margin-bottom: 20px; padding: 15px; background: #f0f9eb; border: 1px solid #e1f3d8; border-radius: 4px;">
+          <p style="margin: 0; font-size: 14px;">当前应用版本：{{ appVersion }}</p>
+          <el-button type="primary" @click="fetchAppVersion" style="margin-top: 10px;">获取版本号阿帆</el-button>
+          <el-input v-model="bbobj.downloadUrl"></el-input>
+        </div>
+
         <!-- 版本更新模块 -->
-      <div class="version-update-section">
-        <h2>版本更新管理</h2>
-        
-        <div class="version-input-group">
-          <label>当前版本：</label>
-          <input type="text" v-model="currentVersion" placeholder="请输入当前版本号">
-          <button class="save-version-btn" @click="saveCurrentVersion">保存</button>
-        </div>
-        
-        <div class="version-input-group">
-          <label>新版本号：</label>
-          <input type="text" v-model="newVersion" placeholder="请输入新版本号（如：1.0.1）">
-        </div>
-        
-        <div class="version-input-group">
-          <label>下载链接：</label>
-          <input type="text" v-model="updateUrl" placeholder="请输入新版本安装包下载链接">
-        </div>
-        
-        <div class="update-buttons">
-          <button class="check-update-btn" @click="checkForUpdates" :disabled="isCheckingUpdate">
-            {{ isCheckingUpdate ? '检查中...' : '检查并更新' }}
-          </button>
-        </div>
-      </div>
-      
-      <!-- 下载进度对话框 -->
-      <div v-if="showDownloadProgress" class="progress-overlay">
-        <div class="download-progress-dialog">
-          <h3>正在下载更新</h3>
-          
-          <div v-if="downloadFileName" class="download-file-name">
-            {{ downloadFileName }}
+        <div class="version-update-section">
+          <div class="update-buttons">
+            <button class="check-update-btn" @click="checkForUpdates" :disabled="isCheckingUpdate">
+              {{ isCheckingUpdate ? '检查中...' : '检查并更新' }}
+            </button>
           </div>
-          
-          <div class="download-status">{{ downloadStatus }}</div>
-          
-          <!-- <div class="progress-bar-container">
+        </div>
+
+        <!-- 下载进度对话框 -->
+        <div v-if="showDownloadProgress" class="progress-overlay">
+          <div class="download-progress-dialog">
+            <h3>正在下载更新</h3>
+
+            <div  class="download-file-name">
+              柯赛解密申请应用更新
+            </div>
+
+            <div class="download-status">{{ downloadStatus }}</div>
+
+            <!-- <div class="progress-bar-container">
             <div class="progress-bar" :style="{ width: downloadProgress + '%' }"></div>
           </div> -->
-          
-          <div class="progress-text">{{ downloadProgress }}%</div>
-          
-          <div v-if="downloadError" style="text-align: center; color: #999; font-size: 12px;">
-            {{ downloadError }}
+
+            <div class="progress-text">{{ downloadProgress }}%</div>
+
+            <div v-if="downloadError" style="text-align: center; color: #999; font-size: 12px;">
+              {{ downloadError }}
+            </div>
           </div>
         </div>
-      </div>
       </div>
       <div class="mt20" v-else>
         <el-table :data="tableData" :header-cell-style="{ background: '#F5F7FA' }" border>
@@ -147,10 +131,10 @@
         </el-table>
       </div>
     </div>
-      
-      
-      <div v-else class="dzong">
-      
+
+
+    <div v-else class="dzong">
+
       <!-- <div class="lbg"></div> -->
       <img src="@/assets/bg.png" style="width: 250px;height: 250px;" alt="">
       <div style="flex: 1;">
@@ -194,14 +178,14 @@ export default {
       jmlist: null,
       jmyy: '',
       xzobj: null,
-      gxurl: 'https://cosunerp.signcc.com/production/20251020/e1707cd3db6741e39cf10ddaae9921b3.exe',
+      bbobj: {
+        latestVersion: "1.2.0",  // 更新版本号
+        downloadUrl: "https://cosunerp.signcc.com/production/20251021/94d1ccb348c642a3848863313f08310e.exe", //更新下载路径
+        releaseNotes: "1. 优化登录流程\n2. 修复了若干bug" // 更新日志
+      },
       baseUrl: "https://cosunerp.signcc.com/cosunErp/",
-      // 版本更新相关变量
-      currentVersion: localStorage.getItem('appVersion') || '1.0.0',
-      newVersion: '',
       updateUrl: '',
       isCheckingUpdate: false,
-      
       // 下载进度相关
       showDownloadProgress: false,
       downloadProgress: 0,
@@ -232,15 +216,6 @@ export default {
       url: 'https://cosunerp.signcc.com/production/20251014/853dd2b09c2c41ec9c09fd9971680b09.pdf'
     }
     console.log(this.xzobj, '初始化')
-    
-    // 从本地存储加载版本信息
-    const savedVersion = localStorage.getItem('appVersion');
-    if (savedVersion) {
-      this.currentVersion = savedVersion;
-    }
-    
-    // 初始化WebSocket连接
-    // this.initWebSocket();
   },
 
   // 组件卸载前清理WebSocket连接
@@ -250,17 +225,9 @@ export default {
   methods: {
     // 检查版本更新
     checkForUpdates() {
-      if (!this.newVersion || !this.updateUrl) {
-        this.$message.error('请输入新版本号和下载链接');
-        return;
-      }
-      
-      this.isCheckingUpdate = true;
-      
-      // 比较版本号
-      if (this.isNewVersionAvailable(this.currentVersion, this.newVersion)) {
+      if (this.bbobj.latestVersion !== this.appVersion) {
         // 有新版本，显示更新提示
-        this.$confirm(`发现新版本 ${this.newVersion}，是否立即更新？`, '版本更新', {
+        this.$confirm(`发现新版本 ${this.bbobj.releaseNotes}，是否立即更新？`, '版本更新', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'info'
@@ -270,54 +237,32 @@ export default {
         }).catch(() => {
           this.$message.info('已取消更新');
         }).finally(() => {
-          this.isCheckingUpdate = false;
+
         });
-      } else {
-        this.$message.info('当前已是最新版本');
-        this.isCheckingUpdate = false;
       }
     },
-    
-    // 比较版本号是否有更新
-    isNewVersionAvailable(current, newVer) {
-      const currentParts = current.split('.').map(Number);
-      const newParts = newVer.split('.').map(Number);
-      
-      for (let i = 0; i < Math.max(currentParts.length, newParts.length); i++) {
-        const currentNum = currentParts[i] || 0;
-        const newNum = newParts[i] || 0;
-        
-        if (newNum > currentNum) {
-          return true;
-        } else if (newNum < currentNum) {
-          return false;
-        }
-      }
-      
-      return false;
-    },
-    
+
     // 开始更新
     startUpdate() {
       try {
         // 在Electron环境中，通过IPC发送更新请求到主进程
         if (window && window.process && window.process.type) {
           const { ipcRenderer } = require('electron');
-          
+
           // 重置下载进度状态
           this.showDownloadProgress = true;
           this.downloadProgress = 0;
           this.downloadStatus = '准备下载...';
           this.downloadFileName = '';
           this.downloadError = '';
-          
+
           // 监听下载进度
           ipcRenderer.on('download-progress', (event, progress) => {
             this.downloadProgress = progress.progress;
             this.downloadStatus = progress.status;
             this.downloadFileName = progress.fileName || '';
             this.downloadError = progress.error ? progress.status : '';
-            
+
             // 如果有错误，显示错误信息
             if (progress.error) {
               this.$message.error(`下载错误: ${progress.status}`);
@@ -326,22 +271,19 @@ export default {
               ipcRenderer.removeAllListeners('download-progress');
             }
           });
-          
+
           // 发送更新请求
           ipcRenderer.send('start-update', {
-            version: this.newVersion,
-            url: this.updateUrl
+            url: this.bbobj.downloadUrl
           });
-          
+
           // 监听更新状态
           ipcRenderer.once('update-status', (event, status) => {
             // 移除下载进度监听器
             ipcRenderer.removeAllListeners('download-progress');
-            
+
             if (status.success) {
               this.$message.success('更新包下载成功，正在安装...');
-              // 保存新版本号
-              localStorage.setItem('appVersion', this.newVersion);
               // 隐藏下载进度对话框
               this.showDownloadProgress = false;
             } else {
@@ -358,34 +300,29 @@ export default {
         this.showDownloadProgress = false;
       }
     },
-    
-    // 保存当前版本号
-    saveCurrentVersion() {
-      localStorage.setItem('appVersion', this.currentVersion);
-      this.$message.success('当前版本号已保存');
-    },
-    
+
+
     async fetchAppVersion() {
       try {
         console.log('开始获取版本号...');
-        
+
         // 直接从导入的package.json获取版本号
         const version = packageJson.version;
         console.log('直接从package.json获取版本号:', version);
-        
+
         if (version) {
           this.appVersion = version;
           console.log('成功设置应用版本号:', this.appVersion);
           this.$message.success(`获取版本号成功: ${this.appVersion}`);
         } else {
-          this.appVersion = '0.1.0';
+          this.appVersion = '1.0.0';
           console.error('Error: 版本号为空');
           this.$message.error('获取版本号失败：版本号为空');
         }
       } catch (error) {
         console.error('获取应用版本号时发生异常:', error);
         // 使用默认版本号作为后备
-        this.appVersion = '0.1.0';
+        this.appVersion = '1.0.0';
         this.$message.error(`获取版本号失败: ${error.message || '未知错误'}`);
       }
     },
@@ -1172,8 +1109,9 @@ body {
   padding: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  width: 400px;
+  width: 260px;
   max-width: 90%;
+  text-align: center;
 }
 
 .download-progress-dialog h3 {
@@ -1216,7 +1154,8 @@ body {
   background-color: #409eff;
   border-radius: 5px;
   transition: width 0.3s ease;
-  min-width: 1%; /* 确保进度条至少显示一点 */
+  min-width: 1%;
+  /* 确保进度条至少显示一点 */
 }
 
 .progress-text {
@@ -1423,12 +1362,6 @@ body {
   background-color: #3498db;
   transition: width 0.3s ease;
 }
-
-.progress-text {
-  font-size: 14px;
-  color: #333;
-}
-
 /* 版本更新模块样式 */
 .version-update-section {
   margin-top: 40px;
