@@ -428,10 +428,14 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
       fullscreenable: false,
       alwaysOnTop: true,
       skipTaskbar: true,
+      transparent: true, // 必须设置为true才能显示圆角
+      backgroundColor: '#00000000', // 完全透明的背景色
+      hasShadow: true,
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
+        offscreen: false,
       },
     });
 
@@ -481,13 +485,16 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            padding: 16px 20px;
+            padding: 0;
             width: 360px;
             height: 190px;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            background-color: #ffffff;
+            overflow: hidden;
+            background: transparent;
+            position: relative;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            /* 重要：防止内容溢出 */
+            contain: strict;
         }
         .notification-container {
             display: flex;
@@ -496,6 +503,13 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
             width: 360px;
             height: 190px;
             position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            /* 重要：启用硬件加速确保圆角渲染 */
+            transform: translateZ(0);
+            backface-visibility: hidden;
         }
         .close-button {
             position: absolute;
@@ -569,7 +583,7 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
             background-color: #4a90e2;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             padding: 8px 16px;
             font-size: 14px;
             cursor: pointer;
@@ -597,7 +611,37 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
     </div>
     <script>
         (function() {
-            const { ipcRenderer } = require('electron');
+            // 关键：使用更强大的方式确保圆角样式生效
+            window.addEventListener('DOMContentLoaded', function() {
+                try {
+                    // 强制应用样式，覆盖可能的默认值
+                    document.body.style.setProperty('border-radius', '12px', 'important');
+                    document.body.style.setProperty('overflow', 'hidden', 'important');
+                    document.body.style.setProperty('background', 'transparent', 'important');
+                    
+                    const container = document.querySelector('.notification-container');
+                    if (container) {
+                        container.style.setProperty('border-radius', '12px', 'important');
+                        container.style.setProperty('overflow', 'hidden', 'important');
+                        container.style.setProperty('transform', 'translateZ(0)', 'important');
+                        
+                        // 添加额外的圆角实现方法：使用clip-path
+                        container.style.clipPath = 'inset(0 0 0 0 round 12px)';
+                    }
+                    
+                    // 强制重绘
+                    requestAnimationFrame(() => {
+                        document.body.offsetHeight; // 触发重绘
+                        if (container) container.offsetHeight; // 触发重绘
+                    });
+                    
+                    console.log('通知圆角样式已强制应用');
+                } catch (error) {
+                    console.error('应用通知圆角样式失败:', error);
+                }
+            });
+            
+              const { ipcRenderer } = require('electron');
               const filePath = '${filePath || ""}';
               // 存储文件路径和默认审核状态
               window.filePath = filePath;
