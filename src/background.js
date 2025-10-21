@@ -492,8 +492,9 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
         .notification-container {
             display: flex;
             align-items: center;
-            width: 100%;
-            height: 100%;
+            padding: 16px 20px;
+            width: 360px;
+            height: 190px;
             position: relative;
         }
         .close-button {
@@ -525,6 +526,8 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
         .notification-icon {
             width: 56px;
             height: 56px;
+            min-width: 56px;
+            min-height: 56px;
             border-radius: 8px;
             margin-right: 16px;
             background-color: #4a90e2;
@@ -533,11 +536,13 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
             justify-content: center;
             color: white;
             font-size: 28px;
+            -webkit-app-region: no-drag;
         }
         .notification-content {
             flex: 1;
             display: flex;
             flex-direction: column;
+            -webkit-app-region: no-drag;
         }
         .notification-title {
             font-size: 16px;
@@ -547,9 +552,15 @@ function showPersistentNotification(body, filePath, auditStatus = "审核通过"
         }
         .notification-body {
             font-size: 14px;
-            color: #666;
+            color: #666666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
             line-height: 1.5;
             margin-bottom: 10px;
+            word-break: break-word;
         }
         .status-info {
             margin-bottom: 8px;

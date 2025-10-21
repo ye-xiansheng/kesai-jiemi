@@ -47,73 +47,20 @@
         <div class="tjbtn"><el-button style="width: 95%;" @click="submitjm" v-debounce:2000="'提交解密申请'"
             type="primary">提交解密申请</el-button></div>
 
-        <!-- <el-button class="mt20" @click="tihuan" type="primary">测试审批通过替换文件</el-button> -->
-        <el-input placeholder="请输入审核状态" v-model="ztvalue"></el-input>
+        <el-button class="mt20" @click="tihuan" type="primary">测试审批通过替换文件</el-button>
         <el-button class="mt20" @click="xiaoxits" type="primary">电脑右下角弹窗消息</el-button>
-        <!-- 文件下载工具 -->
-        <!-- <div class="file-download-section">
-          <h2>文件下载工具</h2>
-
-          <div class="input-group">
-            <input type="text" v-model="downloadUrl" placeholder="请输入要下载的在线链接..." class="file-path-input">
-          </div>
-
-          <div class="input-group">
-            <input type="text" v-model="saveFileName" placeholder="请输入保存的文件名..." class="file-path-input">
-          </div>
-
-          <div class="download-path">
-            <label>下载目录：</label>
-            <span>{{ downloadDirectory }}</span>
-          </div>
-
-          <button @click="downloadFile" class="download-btn">
-            {{ isDownloading ? '下载中...' : '开始下载' }}
-          </button>
-          <div v-if="isDownloading" class="progress-container">
-            <div class="progress-bar">
-              <div class="progress" :style="{ width: downloadProgress + '%' }"></div>
-            </div>
-            <span class="progress-text">{{ downloadProgress }}%</span>
-          </div>
-
-          <div v-if="downloadMessage" :class="['message', downloadMessageType]">
-            {{ downloadMessage }}
-          </div>
-        </div> -->
-
-        <!-- 版本信息 -->
-        <div
-          style="margin-bottom: 20px; padding: 15px; background: #f0f9eb; border: 1px solid #e1f3d8; border-radius: 4px;">
-          <p style="margin: 0; font-size: 14px;">当前应用版本：{{ appVersion }}</p>
-          <el-button type="primary" @click="fetchAppVersion" style="margin-top: 10px;">获取版本号阿帆</el-button>
-          <el-input v-model="bbobj.downloadUrl"></el-input>
-        </div>
-
-        <!-- 版本更新模块 -->
-        <div class="version-update-section">
-          <div class="update-buttons">
-            <button class="check-update-btn" @click="checkForUpdates" :disabled="isCheckingUpdate">
-              {{ isCheckingUpdate ? '检查中...' : '检查并更新' }}
-            </button>
-          </div>
-        </div>
+        <el-button type="primary" @click="fetchAppVersion" style="margin-top: 10px;">获取版本号阿帆</el-button>
+        <el-button type="primary" @click="checkForUpdates" style="margin-top: 10px;">检查更新</el-button>
 
         <!-- 下载进度对话框 -->
         <div v-if="showDownloadProgress" class="progress-overlay">
           <div class="download-progress-dialog">
             <h3>正在下载更新</h3>
 
-            <div  class="download-file-name">
+            <div class="download-file-name">
               柯赛解密申请应用更新
             </div>
-
             <div class="download-status">{{ downloadStatus }}</div>
-
-            <!-- <div class="progress-bar-container">
-            <div class="progress-bar" :style="{ width: downloadProgress + '%' }"></div>
-          </div> -->
-
             <div class="progress-text">{{ downloadProgress }}%</div>
 
             <div v-if="downloadError" style="text-align: center; color: #999; font-size: 12px;">
@@ -167,7 +114,6 @@ export default {
       // 下载相关变量
       downloadUrl: '',
       saveFileName: '',
-      downloadDirectory: 'E:\\exelectron-vue\\aaa',
       isDownloading: false,
       // downloadProgress: 0,
       downloadMessage: '',
@@ -1362,6 +1308,7 @@ body {
   background-color: #3498db;
   transition: width 0.3s ease;
 }
+
 /* 版本更新模块样式 */
 .version-update-section {
   margin-top: 40px;
