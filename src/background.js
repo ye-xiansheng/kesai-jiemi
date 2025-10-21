@@ -20,6 +20,42 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 // 全局变量
 global.tray = null;
 global.appVersion = version;
+global.mainWindow = null; // 存储主窗口引用
+// 设置应用为单实例模式
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  // 如果无法获取锁，说明已有实例在运行，直接退出
+  app.quit();
+} else {
+// 监听第二个实例启动事件
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // 当尝试启动第二个实例时，显示已存在的窗口
+    if (global.mainWindow) {
+      if (global.mainWindow.isMinimized()) global.mainWindow.restore();
+      if (global.mainWindow.isDestroyed()) {
+        // 如果窗口已被销毁，创建新窗口
+        createWindow().then(win => {
+          if (win) {
+            win.show();
+            win.focus();
+          }
+        });
+      } else {
+        global.mainWindow.show();
+        global.mainWindow.focus();
+      }
+    } else {
+      // 如果全局窗口引用为空，创建新窗口
+      createWindow().then(win => {
+        if (win) {
+          win.show();
+          win.focus();
+        }
+      });
+    }
+  });
+}
+
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { secure: true, standard: true } },
@@ -74,8 +110,11 @@ async function createWindow() {
     }
 
     const win = new BrowserWindow(windowOptions);
+    
+    // 保存主窗口引用到全局
+    global.mainWindow = win;
 
-    // 窗口关闭事件 - 隐藏到托盘而不是退出
+// 窗口关闭事件 - 隐藏到托盘而不是退出
     try {
       win.on("close", (event) => {
         try {
@@ -83,6 +122,10 @@ async function createWindow() {
           if (!global.isQuitting) {
             event.preventDefault();
             win.hide();
+            console.log('窗口已隐藏，可通过点击应用图标再次显示');
+          } else {
+            // 如果确实要退出，清理全局引用
+            global.mainWindow = null;
           }
         } catch (closeEventError) {
           console.error("窗口关闭事件处理错误:", closeEventError);
@@ -91,6 +134,15 @@ async function createWindow() {
     } catch (eventError) {
       console.error("设置窗口关闭事件错误:", eventError);
     }
+    
+    // 窗口事件监听，确保引用管理正确
+    win.on('closed', () => {
+      if (!global.isQuitting) {
+        // 即使窗口被强制关闭，也保持对主窗口的引用
+        // 因为我们只是隐藏了窗口而不是真正关闭
+        console.log('窗口closed事件触发，但由于isQuitting为false，保持对窗口的引用');
+      }
+    });
 
     // 加载应用内容
     try {
@@ -160,9 +212,14 @@ app.on("window-all-closed", () => {
 });
 
 app.on("activate", () => {
-  // On macOS it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  // 当点击应用图标时，显示已存在的窗口或创建新窗口
+  if (global.mainWindow && !global.mainWindow.isDestroyed()) {
+    if (global.mainWindow.isMinimized()) global.mainWindow.restore();
+    global.mainWindow.show();
+    global.mainWindow.focus();
+  } else {
+    createWindow();
+  }
 });
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
