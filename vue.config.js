@@ -14,7 +14,7 @@ module.exports = defineConfig({
       // 禁用asar打包，避免路径问题
       asar: false,
       // 设置桌面图标
-      icon: 'src/assets/zhuomian.png.png',
+      icon: 'src/assets/zhuomian.png',
       // 确保资源文件被正确打包 - 同时复制到多个可能的位置以提高兼容性
       extraResources: [
         // 复制到src/assets目录（与代码中的路径匹配）
@@ -31,8 +31,8 @@ module.exports = defineConfig({
         },
         // 直接复制图标文件到根目录
         {
-          from: 'src/assets/zhuomian.png.png',
-          to: 'zhuomian.png.png'
+          from: 'src/assets/zhuomian.png',
+          to: 'zhuomian.png'
         },
         // 添加通知HTML文件到资源中
         {
@@ -44,13 +44,13 @@ module.exports = defineConfig({
       builderOptions: {
         win: {
           target: ['nsis'],
-          icon: 'src/assets/zhuomian.png.png',
+          icon: 'src/assets/zhuomian.png',
           // 添加额外的资源文件
           extraResources: [
             {
               from: 'src/assets',
               to: '.',
-              filter: ['zhuomian.png.png']
+              filter: ['zhuomian.png']
             },
             // 添加通知HTML文件
             {
